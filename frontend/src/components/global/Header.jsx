@@ -21,6 +21,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { Link as RouterLink } from 'react-router-dom';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 
 const Header = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -68,7 +69,7 @@ const Header = () => {
         backgroundColor: 'background.paper',
         display: 'flex',
         flexDirection: 'column',
-        pt: 8, // Espaço para o header
+        pt: 8,
       }}
     >
       {/* Botão Fechar */}
@@ -79,11 +80,11 @@ const Header = () => {
           right: 16,
           top: 16,
           color: 'inherit',
-          padding: 1 // Ajusta o padding do botão
+          padding: 1
         }}
       >
         <CloseIcon sx={{ 
-          fontSize: 32 // Aumenta o tamanho do ícone para combinar com o menu
+          fontSize: 32
         }} />
       </IconButton>
 
@@ -108,7 +109,7 @@ const Header = () => {
                   px: 4,
                   textAlign: 'center',
                   '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.9)'
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
                   }
                 }}
               >
@@ -125,38 +126,34 @@ const Header = () => {
         ))}
       </List>
 
-      {/* Botões de Ação */}
+      {/* Botão de Login */}
       <Box sx={{ 
-        mt: 'auto', 
+        mt: 'auto',
         p: 4,
         display: 'flex',
-        flexDirection: 'column',
-        gap: 2
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
         <Fade in={isDrawerOpen} timeout={600}>
           <Button
             component={RouterLink}
             to="/login"
-            variant="outlined"
-            color="primary"
-            fullWidth
-            size="large"
             onClick={toggleDrawer(false)}
+            sx={{ 
+              color: 'text.primary',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              textTransform: 'none',
+              fontSize: '1.1rem',
+              '&:hover': {
+                backgroundColor: 'transparent',
+                opacity: 0.8
+              }
+            }}
           >
-            Entrar
-          </Button>
-        </Fade>
-        <Fade in={isDrawerOpen} timeout={800}>
-          <Button
-            component={RouterLink}
-            to="/login"
-            variant="contained"
-            color="primary"
-            fullWidth
-            size="large"
-            onClick={toggleDrawer(false)}
-          >
-            Cadastrar
+            <PersonOutlineIcon sx={{ fontSize: 28 }} />
+            <span>Entrar / Cadastrar</span>
           </Button>
         </Fade>
       </Box>
@@ -176,8 +173,9 @@ const Header = () => {
         WebkitBackdropFilter: 'blur(12px)',
         color: elevate ? '#000' : '#fff',
         boxShadow: elevate 
-          ? '0 1px 10px rgba(0, 0, 0, 0.08)'
+          ? '0 1px 3px rgba(0, 0, 0, 0.08)'
           : 'none',
+        zIndex: 1300,
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -237,6 +235,7 @@ const Header = () => {
               alignItems: 'center',
               justifyContent: 'center',
               flex: '1 1 auto',
+              gap: 2
             }}>
               {menuItems.map((item) => (
                 <Button
@@ -251,34 +250,30 @@ const Header = () => {
             </Box>
           )}
 
-          {/* Botões de Ação - Seção Direita */}
+          {/* Botão de Login Desktop */}
           {!isMobile && (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              flex: '0 0 auto',
-            }}>
-              <Button
-                component={RouterLink}
-                to="/login"
-                variant="outlined"
-                color="primary"
-              >
-                Entrar
-              </Button>
-              <Button
-                component={RouterLink}
-                to="/login"
-                variant="contained"
-                color="primary"
-                sx={{ ml: 1 }}
-              >
-                Cadastrar
-              </Button>
-            </Box>
+            <Button
+              component={RouterLink}
+              to="/login"
+              sx={{ 
+                color: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                textTransform: 'none',
+                fontSize: '1rem',
+                '&:hover': {
+                  backgroundColor: 'transparent',
+                  opacity: 0.8
+                }
+              }}
+            >
+              <PersonOutlineIcon sx={{ fontSize: 24 }} />
+              <span>Entrar / Cadastrar</span>
+            </Button>
           )}
 
-          {/* Menu para Mobile */}
+          {/* Menu Mobile */}
           {isMobile && (
             <>
               <IconButton
@@ -287,12 +282,10 @@ const Header = () => {
                 aria-label="menu"
                 onClick={toggleDrawer(true)}
                 sx={{
-                  padding: 1, // Ajusta o padding do botão
+                  padding: 1,
                 }}
               >
-                <MenuIcon sx={{ 
-                  fontSize: 32 // Aumenta o tamanho do ícone
-                }} />
+                <MenuIcon sx={{ fontSize: 32 }} />
               </IconButton>
               <Drawer
                 anchor="right"
