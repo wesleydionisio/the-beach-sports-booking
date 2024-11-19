@@ -6,7 +6,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "jest",
-    "migrate": "node src/migrations/addPaymentMethods.js"
+    "migrate": "node src/migrations/addPaymentMethods.js",
+    "update-users": "node src/scripts/updateUsers.js"
   },
   "keywords": [],
   "author": "",

@@ -3,6 +3,21 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:3000/api',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  }
+});
+
+// Interceptor para logging
+api.interceptors.request.use(request => {
+  console.log('Request:', {
+    url: request.url,
+    method: request.method,
+    data: request.data,
+    headers: request.headers
+  });
+  return request;
 });
 
 // Interceptor para adicionar o token em todas as requisições

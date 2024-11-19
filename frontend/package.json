@@ -22,6 +22,7 @@
     "react-calendar": "^5.1.0",
     "react-dom": "^18.3.1",
     "react-image-gallery": "^1.3.0",
+    "react-imask": "^7.6.1",
     "react-loading-skeleton": "^3.5.0",
     "react-router-dom": "^6.28.0",
     "react-scripts": "5.0.1",
@@ -35,7 +36,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "update-users": "node src/scripts/updateUsers.js"
+
   },
   "eslintConfig": {
     "extends": [

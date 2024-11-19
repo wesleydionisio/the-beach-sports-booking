@@ -9,22 +9,33 @@ const Joi = require('joi');
  */
 const validateRequest = (schema) => {
   return (req, res, next) => {
+    console.group('Validação de Requisição');
+    console.log('Dados recebidos:', req.body);
+    
     const options = {
-      abortEarly: false, // Mostrar todos os erros
-      allowUnknown: true, // Permitir chaves desconhecidas
-      stripUnknown: true // Remover chaves desconhecidas
+      abortEarly: false,
+      allowUnknown: true,
+      stripUnknown: true
     };
 
     const { error, value } = schema.validate(req.body, options);
-
+    
     if (error) {
-      const errorDetails = error.details.map(detail => detail.message);
+      console.log('Erro de validação:', {
+        details: error.details,
+        value: value
+      });
+      console.groupEnd();
+      
       return res.status(400).json({
         success: false,
-        message: 'Validação falhou.',
-        errors: errorDetails,
+        message: error.details[0].message,
+        details: error.details
       });
     }
+
+    console.log('Dados validados:', value);
+    console.groupEnd();
 
     req.body = value;
     next();

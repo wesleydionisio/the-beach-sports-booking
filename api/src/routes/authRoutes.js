@@ -7,7 +7,7 @@ const router = express.Router();
 const validateRequest = require('../middlewares/validateRequest');
 
 // Importar os esquemas de validação
-const { userRegisterSchema, userLoginSchema } = require('../schemas/userSchemas');
+const { userRegisterSchema, userLoginSchema } = require('../validations/userSchemas');
 
 // Importar os controladores de autenticação
 const { register, login } = require('../controllers/authController');
