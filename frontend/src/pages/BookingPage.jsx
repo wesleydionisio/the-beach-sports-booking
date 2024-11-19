@@ -140,7 +140,7 @@ const BookingPage = () => {
       
       if (response.data.success) {
         const reservationId = response.data.reserva._id;
-        navigate(`/reservation-review/${reservationId}`);
+        navigate(`/reserva/${reservationId}`);
       } else {
         alert('Não foi possível confirmar a reserva. Tente novamente.');
       }
@@ -220,14 +220,27 @@ const BookingPage = () => {
 
   return (
     <>
-      <Grid container sx={{ minHeight: '100vh' }}>
+      <Grid 
+        container 
+        sx={{ 
+          minHeight: '100vh',
+          position: 'relative'
+        }}
+      >
         {/* Coluna Esquerda */}
-        <Grid item xs={12} md={7} 
+        <Grid 
+          item 
+          xs={12} 
+          md={7} 
           sx={{
             position: 'relative',
             height: { xs: 'auto', md: '100vh' },
-            minHeight: { xs: '50vh', md: '100vh' },
             overflow: { xs: 'visible', md: 'hidden' },
+            pt: { xs: 14, md: 0 },
+            pb: { xs: 4, md: 0 },
+            display: { xs: 'block', md: 'flex' }, // Adiciona flex apenas no desktop
+            alignItems: { md: 'center' }, // Centraliza verticalmente no desktop
+            justifyContent: { md: 'center' }, // Centraliza horizontalmente no desktop
           }}
         >
           {/* Background com overlay */}
@@ -384,32 +397,40 @@ const BookingPage = () => {
         </Grid>
 
         {/* Coluna Direita */}
-        <Grid item xs={12} md={5}>
+        <Grid 
+          item 
+          xs={12} 
+          md={5} 
+          sx={{
+            height: { md: '100vh' },
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: 'background.paper',
+          }}
+        >
           <Box 
             sx={{ 
               p: 4,
-              pt: { xs: 8, md: 4 },
-              maxWidth: 800, 
-              mx: 'auto',
-              minHeight: { xs: 'auto', md: '100vh' },
+              flex: 1,
               display: 'flex',
-              alignItems: { md: 'center' },
-              justifyContent: 'center',
+              flexDirection: 'column',
+              justifyContent: 'center', // Centraliza verticalmente
               position: 'relative',
-              zIndex: 1,
-              backgroundColor: 'background.paper',
+              overflowY: 'auto', // Permite rolagem se o conteúdo for muito grande
+              height: '100%',
             }}
           >
             {court ? (
               <Box
                 sx={{
                   width: '100%',
+                  maxWidth: '600px',
+                  mx: 'auto', // Centraliza horizontalmente
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: { xs: 5, md: 4 },
-                  py: { md: 4 },
-                  position: 'relative',
-                  zIndex: 2,
+                  gap: 2,
+                  py: { md: 2 },
                 }}
               >
                 {/* Container Superior */}
@@ -417,15 +438,21 @@ const BookingPage = () => {
                   sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: { xs: 5, md: 4 },
+                    gap: 2,
                   }}
                 >
                   {/* Título e Subtítulo */}
-                  <Box sx={{ mb: { xs: 4, md: 2 } }}>
+                  <Box sx={{ 
+                    mb: 1,
+                    mt: { xs: 4, md: 0 }
+                  }}> 
                     <Typography 
                       variant="h4" 
                       component="h2" 
-                      sx={{ fontWeight: 600, mb: 1 }}
+                      sx={{ 
+                        fontWeight: 600, 
+                        mb: 0.5,
+                      }}
                     >
                       Faça a sua reserva
                     </Typography>
@@ -441,7 +468,7 @@ const BookingPage = () => {
                   {/* Calendário e Time Slots em linha */}
                   <Box sx={{ 
                     display: { xs: 'block', md: 'flex' }, 
-                    gap: 4,
+                    gap: 2,
                     position: 'relative',
                     zIndex: 3,
                   }}>
@@ -463,7 +490,7 @@ const BookingPage = () => {
                     </Box>
 
                     {/* Time Slots */}
-                    <Box sx={{ flex: 1, mt: { xs: 4, md: 0 } }}>
+                    <Box sx={{ flex: 1, mt: { xs: 2, md: 0 } }}>
                       {selectedDate ? (
                         <>
                           <Typography variant="h6" gutterBottom>
@@ -487,7 +514,7 @@ const BookingPage = () => {
                     sx={{ 
                       display: { xs: 'flex', md: 'flex' },
                       flexDirection: { xs: 'column', md: 'row' },
-                      gap: { xs: 5, md: 4 },
+                      gap: 2,
                     }}
                   >
                     {/* Botões de Esportes */}
@@ -530,11 +557,7 @@ const BookingPage = () => {
                 </Box>
 
                 {/* Container Inferior - Botão de Confirmar */}
-                <Box
-                  sx={{
-                    mt: 4,
-                  }}
-                >
+                <Box sx={{ mt: 2 }}>
                   <Button
                     variant="contained"
                     color="primary"

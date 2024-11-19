@@ -275,7 +275,7 @@ const PerfilPage = () => {
           variant="contained"
           color="primary"
           size="small"
-          onClick={() => navigate(`/reservation-review/${reserva._id}`)}
+          onClick={() => navigate(`/reserva/${reserva._id}`)}
         >
           Ver Reserva
         </Button>

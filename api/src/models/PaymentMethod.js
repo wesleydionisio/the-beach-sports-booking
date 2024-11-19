@@ -1,30 +1,27 @@
 const mongoose = require('mongoose');
 
 const PaymentMethodSchema = new mongoose.Schema({
-  label: { 
-    type: String, 
+  label: {
+    type: String,
     required: true,
-    unique: true,
-    trim: true
   },
-  icon: { 
-    type: String, 
+  icon: {
+    type: String,
     required: true,
     validate: {
       validator: function(v) {
-        // Aceita caminhos relativos do app ou URLs completas
-        return /^(\/assets\/icons\/|https?:\/\/).+\.(svg|png|jpg|jpeg)$/i.test(v);
+        return v.endsWith('.svg');
       },
-      message: 'Formato de ícone inválido. Use um caminho relativo (/assets/icons/) ou URL válida'
+      message: props => `${props.value} deve ser um arquivo SVG!`
     }
   },
   active: {
     type: Boolean,
-    default: true
+    default: true,
   },
   displayOrder: {
     type: Number,
-    default: 0
+    default: 0,
   }
 }, { timestamps: true });
 

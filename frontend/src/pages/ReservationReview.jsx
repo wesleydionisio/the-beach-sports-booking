@@ -35,30 +35,44 @@ const ReservationReview = () => {
   const [error, setError] = useState('');
   const [openCancelModal, setOpenCancelModal] = useState(false); // Estado para controlar o modal
 
+  const fetchReservationDetails = async () => {
+    try {
+      console.log('Buscando reserva com ID:', reservationId);
+      const response = await axios.get(`/bookings/${reservationId}`);
+      console.log('Resposta completa da API:', response.data);
+      
+      if (response.data.success) {
+        console.log('Dados da reserva:', response.data.reservation);
+        console.log('Método de pagamento:', response.data.reservation.pagamento);
+        setReservation(response.data.reservation);
+      } else {
+        setError('Reserva não encontrada.');
+      }
+    } catch (err) {
+      console.error('Erro ao buscar detalhes da reserva:', err);
+      console.log('Detalhes do erro:', err.response?.data);
+      setError('Não foi possível carregar os detalhes da reserva.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!reservationId) {
-      navigate('/'); // Redireciona para a página inicial se não houver ID
+      navigate('/');
       return;
     }
 
-    const fetchReservationDetails = async () => {
-      try {
-        const response = await axios.get(`/bookings/${reservationId}`);
-        if (response.data.success) {
-          setReservation(response.data.reservation); // Ajuste conforme a estrutura da resposta
-        } else {
-          setError('Reserva não encontrada.');
-        }
-      } catch (err) {
-        console.error('Erro ao buscar detalhes da reserva:', err);
-        setError('Não foi possível carregar os detalhes da reserva.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchReservationDetails();
   }, [reservationId, navigate]);
+
+  // Log quando o estado reservation é atualizado
+  useEffect(() => {
+    console.log('Estado reservation atualizado:', reservation);
+    if (reservation) {
+      console.log('Método de pagamento no estado:', reservation.pagamento);
+    }
+  }, [reservation]);
 
   // Função para mapear o status da reserva para um Chip apropriado
   const getStatusChip = (status) => {
@@ -215,8 +229,15 @@ const ReservationReview = () => {
         {/* Pagamento */}
         <Box mt={4}>
           <Typography variant="h6">Pagamento</Typography>
-          <Typography><strong>Forma de Pagamento:</strong> {reservation.pagamento}</Typography>
-          <Typography><strong>Total:</strong> R$ {reservation.total.toFixed(2)}</Typography>
+          <Typography>
+            <strong>Forma de Pagamento:</strong> 
+            {reservation?.pagamento || 'Não especificado'}
+            {/* Debug inline */}
+            {console.log('Renderizando método de pagamento:', reservation?.pagamento)}
+          </Typography>
+          <Typography>
+            <strong>Total:</strong> R$ {reservation?.total.toFixed(2)}
+          </Typography>
           <Typography><strong>Pague no Local:</strong> {reservation.pague_no_local ? 'Sim' : 'Não'}</Typography>
         </Box>
 

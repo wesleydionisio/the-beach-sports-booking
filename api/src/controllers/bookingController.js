@@ -233,20 +233,20 @@ exports.getReservedTimes = async (req, res) => {
 };
 
 // Função para obter detalhes de uma reserva específica
-// Função para obter detalhes de uma reserva específica
 exports.getBookingById = async (req, res) => {
-  const { id } = req.params; // **Mover esta linha para antes de usar 'id'**
+  const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ success: false, message: 'ID inválido.' });
   }
 
   try {
-    // Buscar a reserva pelo ID e popular os campos necessários
+    // Adicionar .populate('metodo_pagamento') para trazer os dados do método de pagamento
     const booking = await Booking.findById(id)
       .populate('quadra_id')
       .populate('esporte')
-      .populate('usuario_id', 'nome'); // Popula apenas o campo 'nome' do usuário
+      .populate('usuario_id', 'nome')
+      .populate('metodo_pagamento');
 
     if (!booking) {
       return res.status(404).json({
@@ -255,32 +255,29 @@ exports.getBookingById = async (req, res) => {
       });
     }
 
-    console.log(`Reserva encontrada: ${JSON.stringify(booking)}`);
-    console.log(`ID do usuário autenticado: ${req.user.id}`);
-    console.log(`ID do usuário da reserva: ${booking.usuario_id.id}`);
-
-    // Verificar se a reserva pertence ao usuário autenticado usando o método 'equals'
     if (!booking.usuario_id.equals(req.user.id)) {
       console.log(`Usuário ${req.user.id} não tem permissão para acessar a reserva ${id}.`);
       return res.status(403).json({ success: false, message: 'Acesso negado.' });
     }
 
-    // Estruturar os dados da reserva para a resposta
+    // Estruturar os dados da reserva incluindo o label do método de pagamento
     const reservationData = {
       reservationId: booking._id,
       quadra_id: booking.quadra_id._id,
       nome: booking.quadra_id.nome,
       foto_principal: booking.quadra_id.foto_principal,
-      data: booking.data.toISOString().split('T')[0], // Formato YYYY-MM-DD
+      data: booking.data.toISOString().split('T')[0],
       horario_inicio: booking.horario_inicio,
       horario_fim: booking.horario_fim,
       esporte: booking.esporte.nome,
-      cliente: booking.usuario_id.nome, // Nome do cliente
-      pagamento: booking.metodo_pagamento.nome,
+      cliente: booking.usuario_id.nome,
+      pagamento: booking.metodo_pagamento?.label || 'Não especificado',
       total: booking.total,
-      pague_no_local: booking.pague_no_local,
       status: booking.status,
     };
+
+    console.log('Booking completo:', booking);
+    console.log('Método de pagamento:', booking.metodo_pagamento);
 
     res.status(200).json({
       success: true,

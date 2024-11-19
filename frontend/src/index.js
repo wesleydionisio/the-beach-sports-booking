@@ -1,19 +1,22 @@
 // src/index.js
 
 import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css' // Adicione esta linha
-import AppRoutes from './routes';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import './index.css';
+import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { SnackbarProvider } from 'notistack';
 
-ReactDOM.render(
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
   <React.StrictMode>
-    <AuthProvider>
-      <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-        <AppRoutes />
-      </SnackbarProvider>
-    </AuthProvider>
-  </React.StrictMode>,
-  document.getElementById('root')
+    <BrowserRouter>
+      <AuthProvider>
+        <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+          <App />
+        </SnackbarProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </React.StrictMode>
 );

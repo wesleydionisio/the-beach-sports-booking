@@ -14,8 +14,8 @@ dayjs.extend(isSameOrAfter);
 dayjs.locale('pt-br');
 
 const PASTEL_COLORS = {
-  GREEN: '#C1E1C1',
-  YELLOW: '#FAF0BE',
+  GREEN: '#a2ff99',
+  YELLOW: '#ffe564',
   RED: '#FAA0A0'
 };
 
@@ -24,7 +24,7 @@ const StyledDay = styled(PickersDay)(({ theme, availability }) => {
   let backgroundColor = 'transparent';
   
   if (availability !== undefined) {
-    if (availability >= 60) {
+    if (availability >= 70) {
       backgroundColor = PASTEL_COLORS.GREEN;
     } else if (availability > 0) {
       backgroundColor = PASTEL_COLORS.YELLOW;
