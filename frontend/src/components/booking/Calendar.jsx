@@ -95,22 +95,21 @@ const BookingCalendar = ({ selectedDate, onDateChange, quadraId }) => {
         signal: controller.signal
       });
 
-      const reservas = response.data.horarios_agendados || [];
-      
-      // Gerar todos os slots do dia (assumindo horário de 8h às 22h)
-      const totalSlots = 14; // 14 slots de 1 hora (8h às 22h)
-      const slotsDisponiveis = totalSlots - reservas.length;
-      
-      // Calcular porcentagem de disponibilidade
-      const availabilityPercentage = (slotsDisponiveis / totalSlots) * 100;
+      // Só atualiza se a requisição não foi cancelada
+      if (!controller.signal.aborted) {
+        const reservas = response.data.horarios_agendados || [];
+        const totalSlots = 14;
+        const slotsDisponiveis = totalSlots - reservas.length;
+        const availabilityPercentage = (slotsDisponiveis / totalSlots) * 100;
 
-      setHighlightedDays(prev => ({
-        ...prev,
-        [formattedDate]: availabilityPercentage
-      }));
-
+        setHighlightedDays(prev => ({
+          ...prev,
+          [formattedDate]: availabilityPercentage
+        }));
+      }
     } catch (error) {
-      if (error.name !== 'AbortError') {
+      // Ignora erros de cancelamento
+      if (error.name !== 'CanceledError' && error.name !== 'AbortError') {
         console.error('Erro ao buscar disponibilidade:', error);
       }
     }

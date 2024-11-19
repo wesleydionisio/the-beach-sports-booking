@@ -23,8 +23,6 @@ const AppRoutes = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reservation-review/:reservationId" element={<ReservationReview />} />
         <Route path="/review" element={<ReviewPage />} />
-
-        {/* Rota Protegida para PerfilPage */}
         <Route path="/perfil" element={
           <PrivateRoute>
             <PerfilPage />

@@ -121,8 +121,29 @@ const BookingPage = () => {
     }
   }, [selectedDate, quadraId]);
 
-  // Atualizar handleConfirmReservation
+  // Atualizar handleConfirmReservation para salvar todos os dados necessários
   const handleConfirmReservation = async () => {
+    console.log('🎯 Iniciando processo de reserva...');
+    const token = localStorage.getItem('authToken');
+    
+    if (!token) {
+      console.log('⚠️ Usuário não autenticado, salvando dados...');
+      const bookingData = {
+        quadraId,
+        date: selectedDate.format('YYYY-MM-DD'),
+        slot: selectedSlot,
+        sport: selectedSport,
+        payment: selectedPayment,
+        courtName: court?.nome, // Adicionar nome da quadra
+        courtImage: court?.foto_principal // Adicionar foto da quadra
+      };
+      
+      console.log('📝 Salvando dados da reserva:', bookingData);
+      localStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+      console.log('🔄 Redirecionando para login...');
+      navigate('/login');
+      return;
+    }
     try {
       const requestBody = {
         quadra_id: quadraId,
