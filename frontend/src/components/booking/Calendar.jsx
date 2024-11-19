@@ -168,18 +168,40 @@ const BookingCalendar = ({ selectedDate, onDateChange, quadraId }) => {
         disablePast
         sx={{
           width: '100%',
+          maxWidth: 'none',
+          '& .MuiPickersCalendarHeader-root': {
+            width: '100%',
+            maxWidth: 'none',
+            paddingLeft: '24px',
+            paddingRight: '24px',
+          },
+          '& .MuiDayCalendar-header, .MuiDayCalendar-weekContainer': {
+            width: '100%',
+            maxWidth: 'none',
+            justifyContent: 'space-around',
+          },
           '& .MuiPickersDay-root': {
             fontSize: '0.875rem',
-            height: '40px', // Aumentar altura para acomodar a barra
+            height: '40px',
+            width: '40px',
+            '@media (min-width: 600px)': {
+              height: '45px',
+              width: '45px',
+            },
           },
           '& .MuiDayCalendar-weekDayLabel': {
             fontSize: '0.875rem',
+            width: '40px',
+            '@media (min-width: 600px)': {
+              width: '45px',
+            },
           },
           '& .MuiPickersDay-today': {
             borderColor: 'primary.main',
           },
-          // Aumentar espaçamento entre as semanas
           '& .MuiDayCalendar-monthContainer': {
+            width: '100%',
+            maxWidth: 'none',
             rowGap: '8px',
           },
         }}

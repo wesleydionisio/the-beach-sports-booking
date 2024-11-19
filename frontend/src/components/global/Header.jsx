@@ -7,28 +7,26 @@ import {
   Typography,
   Button,
   IconButton,
-  Menu,
-  MenuItem,
   Box,
   useMediaQuery,
   useTheme,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemButton,
+  Fade,
+  Slide
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import CloseIcon from '@mui/icons-material/Close';
 import { Link as RouterLink } from 'react-router-dom';
 
 const Header = () => {
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [elevate, setElevate] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
-  const handleMenu = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
 
   const handleScroll = () => {
     const offset = window.scrollY;
@@ -47,6 +45,13 @@ const Header = () => {
     };
   }, []);
 
+  const toggleDrawer = (open) => (event) => {
+    if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
+      return;
+    }
+    setIsDrawerOpen(open);
+  };
+
   const menuItems = [
     { label: 'A Beach Sports', path: '/' },
     { label: 'Valores', path: '/valores' },
@@ -55,6 +60,109 @@ const Header = () => {
     { label: 'Contato', path: '/contato' },
   ];
 
+  const DrawerContent = () => (
+    <Box
+      sx={{
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'background.paper',
+        display: 'flex',
+        flexDirection: 'column',
+        pt: 8, // Espaço para o header
+      }}
+    >
+      {/* Botão Fechar */}
+      <IconButton
+        onClick={toggleDrawer(false)}
+        sx={{
+          position: 'absolute',
+          right: 16,
+          top: 16,
+          color: 'inherit',
+          padding: 1 // Ajusta o padding do botão
+        }}
+      >
+        <CloseIcon sx={{ 
+          fontSize: 32 // Aumenta o tamanho do ícone para combinar com o menu
+        }} />
+      </IconButton>
+
+      {/* Lista de Menu */}
+      <List sx={{ width: '100%', pt: 4 }}>
+        {menuItems.map((item, index) => (
+          <Slide
+            direction="right"
+            in={isDrawerOpen}
+            timeout={(index + 1) * 100}
+            key={item.label}
+          >
+            <ListItem 
+              disablePadding
+              onClick={toggleDrawer(false)}
+            >
+              <ListItemButton
+                component={RouterLink}
+                to={item.path}
+                sx={{
+                  py: 2,
+                  px: 4,
+                  textAlign: 'center',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.9)'
+                  }
+                }}
+              >
+                <ListItemText 
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    variant: 'h6',
+                    textAlign: 'center'
+                  }}
+                />
+              </ListItemButton>
+            </ListItem>
+          </Slide>
+        ))}
+      </List>
+
+      {/* Botões de Ação */}
+      <Box sx={{ 
+        mt: 'auto', 
+        p: 4,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2
+      }}>
+        <Fade in={isDrawerOpen} timeout={600}>
+          <Button
+            component={RouterLink}
+            to="/login"
+            variant="outlined"
+            color="primary"
+            fullWidth
+            size="large"
+            onClick={toggleDrawer(false)}
+          >
+            Entrar
+          </Button>
+        </Fade>
+        <Fade in={isDrawerOpen} timeout={800}>
+          <Button
+            component={RouterLink}
+            to="/login"
+            variant="contained"
+            color="primary"
+            fullWidth
+            size="large"
+            onClick={toggleDrawer(false)}
+          >
+            Cadastrar
+          </Button>
+        </Fade>
+      </Box>
+    </Box>
+  );
+
   return (
     <AppBar
       position="fixed"
@@ -62,11 +170,14 @@ const Header = () => {
       sx={{
         transition: 'all 0.3s ease',
         backgroundColor: elevate 
-          ? 'rgba(255, 255, 255, 0.8)' // Fundo semi-transparente quando elevado
-          : 'rgba(0, 0, 0, 0.2)',      // Overlay escuro quando não elevado
-        backdropFilter: 'blur(8px)',    // Efeito de blur
-        WebkitBackdropFilter: 'blur(8px)', // Suporte para Safari
+          ? 'rgba(255, 255, 255, 0.5)' 
+          : 'rgba(0, 0, 0, 0.2)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         color: elevate ? '#000' : '#fff',
+        boxShadow: elevate 
+          ? '0 1px 10px rgba(0, 0, 0, 0.08)'
+          : 'none',
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -112,7 +223,7 @@ const Header = () => {
               src="/logo_beach_sports.png"
               alt="A Beach Sports Logo"
               style={{
-                height: '60px',
+                height: '50px',
                 width: 'auto',
                 objectFit: 'contain'
               }}
@@ -174,50 +285,28 @@ const Header = () => {
                 edge="start"
                 color="inherit"
                 aria-label="menu"
-                onClick={handleMenu}
+                onClick={toggleDrawer(true)}
+                sx={{
+                  padding: 1, // Ajusta o padding do botão
+                }}
               >
-                <MenuIcon />
+                <MenuIcon sx={{ 
+                  fontSize: 32 // Aumenta o tamanho do ícone
+                }} />
               </IconButton>
-              <Menu
-                id="menu-appbar"
-                anchorEl={anchorEl}
-                anchorOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
+              <Drawer
+                anchor="right"
+                open={isDrawerOpen}
+                onClose={toggleDrawer(false)}
+                sx={{
+                  '& .MuiDrawer-paper': {
+                    width: '100%',
+                    transition: 'transform 0.3s ease-in-out'
+                  }
                 }}
-                keepMounted
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                open={Boolean(anchorEl)}
-                onClose={handleClose}
               >
-                {menuItems.map((item) => (
-                  <MenuItem
-                    key={item.label}
-                    component={RouterLink}
-                    to={item.path}
-                    onClick={handleClose}
-                  >
-                    {item.label}
-                  </MenuItem>
-                ))}
-                <MenuItem
-                  component={RouterLink}
-                  to="/entrar"
-                  onClick={handleClose}
-                >
-                  Entrar
-                </MenuItem>
-                <MenuItem
-                  component={RouterLink}
-                  to="/login"
-                  onClick={handleClose}
-                >
-                  Cadastrar
-                </MenuItem>
-              </Menu>
+                <DrawerContent />
+              </Drawer>
             </>
           )}
         </Toolbar>

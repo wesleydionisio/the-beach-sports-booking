@@ -1,7 +1,7 @@
 // src/components/CourtCard.jsx
 
 import React, { useState } from 'react';
-import { Card, CardMedia, CardContent, CardActions, Button, Typography, Box, Chip } from '@mui/material';
+import { Card, CardContent, Button, Typography, Box, Chip } from '@mui/material';
 import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
 import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
 import SportsBasketballIcon from '@mui/icons-material/SportsBasketball';
@@ -13,13 +13,19 @@ import 'react-loading-skeleton/dist/skeleton.css';
 const CourtCard = ({ court }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
 
+  // Pré-carregar a imagem
+  React.useEffect(() => {
+    const img = new Image();
+    img.src = court.foto_principal;
+    img.onload = () => setImageLoaded(true);
+  }, [court.foto_principal]);
+
   // Mapa de ícones por esporte
   const esporteIcons = {
     'Futebol': SportsSoccerIcon,
     'Vôlei': SportsVolleyballIcon,
     'Basquete': SportsBasketballIcon,
     'Tênis': SportsTennisIcon,
-    // Adicione mais esportes conforme necessário
   };
 
   const getEsporteIcon = (esporte) => {
@@ -35,7 +41,7 @@ const CourtCard = ({ court }) => {
         display: 'flex', 
         flexWrap: 'wrap', 
         gap: 1,
-        mt: 2 
+        mt: 1
       }}>
         {esportes.map((esporte, index) => {
           const nomeEsporte = typeof esporte === 'object' ? esporte.nome : esporte;
@@ -46,10 +52,15 @@ const CourtCard = ({ court }) => {
               label={nomeEsporte}
               size="small"
               sx={{
-                backgroundColor: 'rgba(25, 118, 210, 0.08)', // Cor de fundo suave
-                color: 'primary.main',
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                color: 'white',
                 '& .MuiChip-icon': {
-                  color: 'primary.main',
+                  color: 'white',
+                },
+                backdropFilter: 'blur(4px)',
+                px: 1,
+                '& .MuiChip-label': {
+                  px: 1,
                 }
               }}
             />
@@ -62,90 +73,97 @@ const CourtCard = ({ court }) => {
   return (
     <Card sx={{ 
       width: '100%',
-      maxWidth: { xs: '100%', sm: 345 },
-      minWidth: { xs: '100%', sm: 345 },
-      borderRadius: 3, 
-      boxShadow: 3,
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      mx: { xs: 0, sm: 'auto' },
+      height: 240,
+      position: 'relative',
+      borderRadius: 6,
+      overflow: 'hidden',
+      backgroundImage: `url(${court.foto_principal})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundColor: '#333', // Fallback enquanto a imagem carrega
+      '&:before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%)',
+        zIndex: 1,
+      }
     }}>
-      {/* Área da Imagem */}
       {!imageLoaded && (
-        <Skeleton 
-          height={200} 
-          width="100%" 
-          style={{ display: 'block' }}
-        />
+        <Box 
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: '#333',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Skeleton 
+            height="100%"
+            width="100%" 
+          />
+        </Box>
       )}
 
-      <CardMedia
-        component="img"
-        alt={court.nome}
-        height="200"
-        image={court.foto_principal || 'https://via.placeholder.com/300x200'}
-        onLoad={() => setImageLoaded(true)}
-        style={{
-          ...(!imageLoaded && { display: 'none' }),
-          objectFit: 'cover',
-        }}
-      />
-
-      {/* Conteúdo do Card */}
       <CardContent sx={{ 
-        flexGrow: 1,
-        pb: 0, // Remove o padding bottom do CardContent
+        position: 'relative',
+        zIndex: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        color: 'white',
+        p: 2,
+        '&:last-child': {
+          pb: 2
+        },
+        height: '100%',
+        boxSizing: 'border-box'
       }}>
-        {!imageLoaded ? (
-          <>
-            <Skeleton height={30} width="80%" style={{ marginBottom: 6 }} />
-            <Skeleton height={20} width="60%" />
-            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Skeleton width={80} height={32} />
-              <Skeleton width={80} height={32} />
-              <Skeleton width={80} height={32} />
-            </Box>
-          </>
-        ) : (
-          <>
-            <Typography variant="h6" component="div" gutterBottom>
-              {court.nome}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {court.endereco}
-            </Typography>
-            {renderEsportes(court.esportes_permitidos)}
-          </>
-        )}
-      </CardContent>
-
-      {/* Ações do Card */}
-      <CardActions 
-        sx={{ 
-          p: 0, // Remove todo padding
-          mt: 2, // Adiciona margem superior
-          '& .MuiButton-root': { // Estiliza o botão
-            borderRadius: 0, // Remove border radius
-            py: 1.5, // Aumenta padding vertical
-            textTransform: 'none', // Opcional: remove texto em maiúsculas
-          }
-        }}
-      >
-        {!imageLoaded ? (
-          <Skeleton height={48} width="100%" style={{ margin: 0 }} />
-        ) : (
-          <Button 
-            size="large"
-            variant="contained" 
-            color="primary" 
-            href={`/booking/${court._id}`}
-            fullWidth
+        {/* Conteúdo Superior */}
+        <Box>
+          <Typography 
+            variant="h5" 
+            component="div" 
+            sx={{ 
+              fontWeight: 500,
+              textShadow: '2px 2px 10px rgba(0,0,0,0.5)',
+              mb: 1
+            }}
           >
-            Reservar
-          </Button>
-        )}
-      </CardActions>
+            {court.nome}
+          </Typography>
+          {renderEsportes(court.esportes_permitidos)}
+        </Box>
+
+        {/* Botão de Reserva */}
+        <Button 
+          variant="contained"
+          href={`/booking/${court._id}`}
+          fullWidth
+          sx={{
+            py: 1.5,
+            borderRadius: 2,
+            textTransform: 'none',
+            fontSize: '1rem',
+            backgroundColor: 'primary.main',
+            '&:hover': {
+              backgroundColor: 'primary.dark',
+            },
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            mt: 'auto' // Isso empurra o botão para baixo
+          }}
+        >
+          Reservar
+        </Button>
+      </CardContent>
     </Card>
   );
 };

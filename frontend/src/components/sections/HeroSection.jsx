@@ -18,29 +18,64 @@ const HeroSection = ({ courts, loading }) => {
     speed: 500,
     slidesToShow: 3,
     slidesToScroll: 1,
-    centerMode: false,
-    centerPadding: '0px',
     autoplay: true,
     autoplaySpeed: 3500,
     pauseOnHover: true,
     pauseOnFocus: true,
     pauseOnDotsHover: true,
     arrows: true,
+    variableWidth: false,
+    centerMode: false,
+    cssEase: "linear",
+    className: "hero-slider",
     responsive: [
       {
         breakpoint: 960,
         settings: {
           slidesToShow: 2,
+          slidesToScroll: 1,
+          arrows: true,
         },
       },
       {
         breakpoint: 600,
         settings: {
           slidesToShow: 1,
-          arrows: false, // Remove setas no mobile
+          slidesToScroll: 1,
+          arrows: false,
+          centerMode: true,
+          centerPadding: '0',
         },
       },
     ],
+  };
+
+  const sliderStyles = {
+    '.court-slider': {
+      width: '100%',
+      margin: '0 auto',
+      overflow: 'hidden',
+    },
+    '.slick-list': {
+      margin: '0 !important',
+      padding: '0 !important',
+    },
+    '.slick-track': {
+      display: 'flex !important',
+      alignItems: 'center',
+    },
+    '.slick-slide': {
+      width: '100% !important',
+      '& > div': {
+        width: '100%',
+      },
+    },
+    '.slick-dots': {
+      bottom: '10px',
+      '& li button:before': {
+        fontSize: '8px',
+      },
+    },
   };
 
   // Número de skeletons a serem exibidos no slider
@@ -119,75 +154,56 @@ const HeroSection = ({ courts, loading }) => {
           mt: 4,
           position: 'relative',
           width: '100%',
-          '& .slick-slide': {
-            padding: { xs: '0 8px', sm: '0 8px' },
-            display: 'flex !important',
-            justifyContent: 'center',
-            '& > div': {
-              width: '100%',
-            }
-          },
-          '& .slick-list': {
-            margin: { xs: '0 -8px', sm: '0 -8px' },
-            overflow: 'hidden',
-            '.slick-track': {
-              display: 'flex !important',
-              gap: { xs: '16px', sm: 0 },
-            }
-          },
-          '& .slick-track': {
-            display: 'flex !important',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto',
-          },
-          '& .slick-slider': {
+          '.hero-slider': {
             width: '100%',
             margin: '0 auto',
-          },
-          // Estilização dos dots
-          '& .slick-dots': {
-            bottom: -40,
-            '& li': {
-              margin: 0,
-              '& button': {
-                '&:before': {
+            '& .slick-list': {
+              overflow: 'hidden',
+              margin: '0 -12px',
+            },
+            '& .slick-slide': {
+              padding: '0 12px',
+              '& > div': {
+                width: '100%',
+              }
+            },
+            '& .slick-track': {
+              display: 'flex !important',
+              alignItems: 'stretch',
+              margin: '0 auto',
+            },
+            '& .slick-dots': {
+              bottom: -40,
+              '& li': {
+                margin: 0,
+                '& button:before': {
                   fontSize: 12,
                   color: 'white',
                   opacity: 0.5,
+                },
+                '&.slick-active button:before': {
+                  opacity: 1,
                 }
-              },
-              '&.slick-active button:before': {
-                opacity: 1,
-                color: 'white',
               }
-            }
-          },
-          // Estilização das setas
-          '& .slick-prev, & .slick-next': {
-            width: 40,
-            height: 40,
-            zIndex: 1,
-            '&:before': {
-              fontSize: 40,
-              opacity: 0.5,
             },
-            '&:hover:before': {
-              opacity: 1,
-            }
-          },
-          '& .slick-prev': {
-            left: { xs: 10, md: -50 },
-          },
-          '& .slick-next': {
-            right: { xs: 10, md: -50 },
-          },
-          '@media (max-width: 600px)': {
-            mx: -2,
-            width: 'calc(100% + 16px)',
-            '& .slick-slide': {
-              marginBottom: '16px',
-            }
+            '& .slick-prev, & .slick-next': {
+              width: 40,
+              height: 40,
+              zIndex: 2,
+              '&:before': {
+                fontSize: 40,
+                opacity: 0.7,
+              },
+              '&:hover:before': {
+                opacity: 1,
+              }
+            },
+            '& .slick-prev': {
+              left: { xs: -10, md: -50 },
+            },
+            '& .slick-next': {
+              right: { xs: -10, md: -50 },
+            },
           }
         }}>
           {loading ? (
@@ -200,11 +216,7 @@ const HeroSection = ({ courts, loading }) => {
                 <Box 
                   key={court._id} 
                   sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    width: '100%',
-                    px: { xs: 2, sm: 0 },
-                    mb: { xs: 2, sm: 0 }
+                    height: '100%',
                   }}
                 >
                   <DefaultCourtCard court={court} />
@@ -218,31 +230,42 @@ const HeroSection = ({ courts, loading }) => {
 
         {/* Redes Sociais */}
         <Box sx={{ 
-          mt: 4,
+          mt: 8,
           display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 2,
+          gap: { xs: 1, md: 3 },
         }}>
           <Typography 
             variant="h6"
             sx={{
-              m: 0,
+              m: -1,
+              textAlign: { xs: 'center', md: 'left' },
+              fontSize: { xs: '1rem', md: '1.25rem' },
             }}
           >
             Siga-nos nas redes sociais
           </Typography>
+          
           <Box sx={{ 
             display: 'flex',
             gap: 2,
             alignItems: 'center',
+            justifyContent: { xs: 'center', md: 'flex-start' },
           }}>
             <IconButton
               component="a"
               href="https://instagram.com/seu-perfil"
               target="_blank"
               rel="noopener noreferrer"
-              sx={{ color: '#fff' }}
+              sx={{ 
+                color: '#fff',
+                padding: { xs: 0.5, md: 1 },
+                '&:hover': {
+                  color: 'primary.main'
+                }
+              }}
             >
               <InstagramIcon fontSize="large" />
             </IconButton>
@@ -251,7 +274,13 @@ const HeroSection = ({ courts, loading }) => {
               href="https://facebook.com/seu-perfil"
               target="_blank"
               rel="noopener noreferrer"
-              sx={{ color: '#fff' }}
+              sx={{ 
+                color: '#fff',
+                padding: { xs: 0.5, md: 1 },
+                '&:hover': {
+                  color: 'primary.main'
+                }
+              }}
             >
               <FacebookIcon fontSize="large" />
             </IconButton>
