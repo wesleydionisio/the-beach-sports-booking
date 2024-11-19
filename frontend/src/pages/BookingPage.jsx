@@ -93,6 +93,68 @@ const BookingPage = () => {
     return slots;
   };
 
+  // Mover a função fetchTimeSlots para fora do useEffect
+  const fetchTimeSlots = async (date) => {
+    setLoading(true);
+    try {
+      const formattedDate = date.format('YYYY-MM-DD');
+      const response = await axios.get(`/bookings/${quadraId}/reserved-times`, {
+        params: { data: formattedDate },
+      });
+
+      const reservas = response.data.horarios_agendados || [];
+      console.log('Reservas recebidas:', reservas);
+      const slots = generateTimeSlots(reservas);
+      setTimeSlots(slots);
+    } catch (error) {
+      console.error('Erro ao buscar horários disponíveis:', error);
+      setError('Não foi possível carregar os horários disponíveis.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Atualizar o useEffect para usar a função
+  useEffect(() => {
+    if (selectedDate) {
+      fetchTimeSlots(selectedDate);
+    }
+  }, [selectedDate, quadraId]);
+
+  // Atualizar handleConfirmReservation
+  const handleConfirmReservation = async () => {
+    try {
+      const requestBody = {
+        quadra_id: quadraId,
+        data: selectedDate.format('YYYY-MM-DD'),
+        horario_inicio: selectedSlot.horario_inicio,
+        horario_fim: selectedSlot.horario_fim,
+        esporte_id: selectedSport,
+        metodo_pagamento_id: selectedPayment
+      };
+
+      const response = await axios.post('/bookings', requestBody);
+      
+      // Atualizar os horários disponíveis após criar a reserva
+      await fetchTimeSlots(selectedDate);
+      
+      if (response.data.success) {
+        const reservationId = response.data.reserva._id;
+        navigate(`/reservation-review/${reservationId}`);
+      } else {
+        alert('Não foi possível confirmar a reserva. Tente novamente.');
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 
+        'Não foi possível confirmar a reserva. Tente novamente.';
+      
+      // Atualizar os horários disponíveis em caso de erro também
+      await fetchTimeSlots(selectedDate);
+      
+      alert(errorMessage);
+    }
+  };
+
   // Buscar detalhes da quadra
   useEffect(() => {
     const fetchCourtDetails = async () => {
@@ -117,61 +179,6 @@ const BookingPage = () => {
 
     fetchCourtDetails();
   }, [quadraId]);
-
-  // Buscar horários reservados
-  useEffect(() => {
-    if (selectedDate) {
-      const fetchTimeSlots = async () => {
-        setLoading(true);
-        try {
-          const formattedDate = new Date(selectedDate).toISOString().split('T')[0];
-          const response = await axios.get(`/bookings/${quadraId}/reserved-times`, {
-            params: { data: formattedDate },
-          });
-
-          const reservas = response.data.horarios_agendados || [];
-          console.log('Reservas recebidas:', reservas); // Log para verificar
-          const slots = generateTimeSlots(reservas);
-          setTimeSlots(slots);
-        } catch (error) {
-          console.error('Erro ao buscar horários disponíveis:', error);
-          setError('Não foi possível carregar os horários disponíveis.');
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchTimeSlots();
-    }
-  }, [selectedDate, quadraId]);
-
-  // Função para confirmar reserva
-  const handleConfirmReservation = async () => {
-    try {
-      const requestBody = {
-        quadra_id: quadraId,
-        data: selectedDate.format('YYYY-MM-DD'),
-        horario_inicio: selectedSlot.horario_inicio,
-        horario_fim: selectedSlot.horario_fim,
-        esporte_id: selectedSport,
-        metodo_pagamento_id: selectedPayment
-      };
-
-      const response = await axios.post('/bookings', requestBody);
-
-      if (response.data.success) {
-        const reservationId = response.data.reserva._id;
-        navigate(`/reservation-review/${reservationId}`);
-      } else {
-        alert('Não foi possível confirmar a reserva. Tente novamente.');
-      }
-    } catch (error) {
-      console.error('Erro ao confirmar a reserva:', error);
-      const errorMessage = error.response?.data?.message || 
-        'Não foi possível confirmar a reserva. Tente novamente.';
-      alert(errorMessage);
-    }
-  };
 
   // Mapa de ícones para cada esporte
   const sportIcons = {

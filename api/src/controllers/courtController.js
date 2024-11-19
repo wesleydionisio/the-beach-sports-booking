@@ -119,16 +119,11 @@ exports.getReservedTimes = async (req, res) => {
     const { id } = req.params; // ID da quadra
     const { data } = req.query; // Data no formato YYYY-MM-DD
 
-    // Verificar se a quadra existe
-    const court = await Court.findById(id);
-    if (!court) {
-      return res.status(404).json({ message: 'Quadra não encontrada.' });
-    }
-
-    // Buscar reservas para a quadra na data especificada
+    // Buscar reservas existentes para a data
     const reservas = await Booking.find({ 
       quadra_id: id, 
-      data 
+      data,
+      status: { $ne: 'cancelada' } // Ignora reservas canceladas
     });
 
     // Formatar os horários reservados
@@ -139,6 +134,9 @@ exports.getReservedTimes = async (req, res) => {
 
     res.status(200).json({ horariosReservados });
   } catch (err) {
-    res.status(500).json({ message: 'Erro ao buscar horários reservados.', error: err.message });
+    res.status(500).json({ 
+      message: 'Erro ao buscar horários reservados.', 
+      error: err.message 
+    });
   }
 };

@@ -7,6 +7,39 @@ const Sport = require('../models/Sport'); // Corrigido de Esporte para Sport
 const User = require('../models/User'); // Adicionar importação do User se necessário
 const Joi = require('joi');
 
+// Função auxiliar para verificar disponibilidade
+const verificarDisponibilidade = async (quadra_id, data, horario_inicio, horario_fim) => {
+  // Buscar reservas existentes para a quadra na mesma data
+  const reservasExistentes = await Booking.find({
+    quadra_id,
+    data,
+    status: { $ne: 'cancelada' }, // Ignora reservas canceladas
+    $or: [
+      // Verifica se há sobreposição de horários
+      {
+        $and: [
+          { horario_inicio: { $lte: horario_inicio } },
+          { horario_fim: { $gt: horario_inicio } }
+        ]
+      },
+      {
+        $and: [
+          { horario_inicio: { $lt: horario_fim } },
+          { horario_fim: { $gte: horario_fim } }
+        ]
+      },
+      {
+        $and: [
+          { horario_inicio: { $gte: horario_inicio } },
+          { horario_fim: { $lte: horario_fim } }
+        ]
+      }
+    ]
+  });
+
+  return reservasExistentes.length === 0;
+};
+
 // Função para criar uma reserva
 exports.createBooking = async (req, res) => {
   try {
@@ -18,6 +51,21 @@ exports.createBooking = async (req, res) => {
       esporte_id,
       metodo_pagamento_id  // Alterado de 'pagamento' para 'metodo_pagamento_id'
     } = req.body;
+
+    // Verificar disponibilidade antes de criar a reserva
+    const disponivel = await verificarDisponibilidade(
+      quadra_id,
+      data,
+      horario_inicio,
+      horario_fim
+    );
+
+    if (!disponivel) {
+      return res.status(400).json({
+        success: false,
+        message: 'Horário não está mais disponível'
+      });
+    }
 
     // Validar se todos os campos necessários foram fornecidos
     if (!quadra_id || !data || !horario_inicio || !horario_fim || !esporte_id || !metodo_pagamento_id) {
@@ -52,7 +100,7 @@ exports.createBooking = async (req, res) => {
       esporte: esporte_id,
       metodo_pagamento: metodo_pagamento_id,
       total,
-      pague_no_local: false // Será definido com base no método de pagamento
+      status: 'pendente'
     });
 
     res.status(201).json({
