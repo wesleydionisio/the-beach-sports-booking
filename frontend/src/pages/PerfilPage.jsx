@@ -29,10 +29,18 @@ import { useSnackbar } from 'notistack';
 
 const PerfilPage = () => {
   const { user, setUser, login, register, logout } = useContext(AuthContext);
-  console.log('PerfilPage - user:', user);
-  console.log('PerfilPage - setUser:', setUser);
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
+
+  // Verificar autenticação e redirecionar
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token || !user) {
+      console.log('Usuário não autenticado, redirecionando para login...');
+      navigate('/login');
+      return;
+    }
+  }, [user, navigate]);
 
   const [profileData, setProfileData] = useState({
     nome: '',
@@ -314,103 +322,6 @@ const PerfilPage = () => {
 
     return <Chip label={label} color={color} size="small" />;
   };
-
-  // Se o usuário não estiver autenticado, mostrar o formulário de login/cadastro
-  if (!user) {
-    return (
-      <Container maxWidth="sm" sx={{ mt: 5, mb: 5 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Tabs
-            value={activeTab}
-            onChange={(e, newValue) => setActiveTab(newValue)}
-            variant="fullWidth"
-            textColor="primary"
-            indicatorColor="primary"
-          >
-            <Tab label="Login" />
-            <Tab label="Criar Conta" />
-          </Tabs>
-
-          {/* Formulário de Login */}
-          {activeTab === 0 && (
-            <Box component="form" onSubmit={handleLogin} noValidate sx={{ mt: 3 }}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                label="Email"
-                name="email"
-                type="email"
-                value={loginData.email}
-                onChange={handleChangeLogin}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                label="Senha"
-                name="password"
-                type="password"
-                value={loginData.password}
-                onChange={handleChangeLogin}
-              />
-              <Button type="submit" fullWidth variant="contained" color="primary" sx={{ mt: 3 }}>
-                Login
-              </Button>
-            </Box>
-          )}
-
-          {/* Formulário de Cadastro */}
-          {activeTab === 1 && (
-            <Box component="form" onSubmit={handleRegister} noValidate sx={{ mt: 3 }}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                label="Nome"
-                name="nome"
-                value={registerData.nome}
-                onChange={handleChangeRegister}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                label="Email"
-                name="email"
-                type="email"
-                value={registerData.email}
-                onChange={handleChangeRegister}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                label="Telefone"
-                name="telefone"
-                value={registerData.telefone}
-                onChange={handleChangeRegister}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                label="Senha"
-                name="password"
-                type="password"
-                value={registerData.password}
-                onChange={handleChangeRegister}
-              />
-              {/* Adicione outros campos conforme necessário */}
-              <Button type="submit" fullWidth variant="contained" color="primary" sx={{ mt: 3 }}>
-                Criar Conta
-              </Button>
-            </Box>
-          )}
-        </Paper>
-      </Container>
-    );
-  }
 
   return (
     <Container maxWidth="md" sx={{ mt: 5, mb: 5 }}>

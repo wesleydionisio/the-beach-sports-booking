@@ -1,5 +1,5 @@
 // src/pages/LoginPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -45,6 +45,7 @@ const isValidPassword = (password) => {
 };
 
 const LoginPage = () => {
+  const navigate = useNavigate();
   const [tab, setTab] = useState(0); // Tab 0 = Login, Tab 1 = Criar Conta
   const [formData, setFormData] = useState({
     nome: '',
@@ -56,7 +57,17 @@ const LoginPage = () => {
   const [formErrors, setFormErrors] = useState({});
   const [loading, setLoading] = useState(false); // Estado para carregamento
   const [error, setError] = useState(''); // Estado para erros
-  const navigate = useNavigate();
+
+  // Adicionar verificação de autenticação
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    const userData = localStorage.getItem('userData');
+    
+    if (token && userData) {
+      console.log('Usuário já autenticado, redirecionando para perfil...');
+      navigate('/perfil');
+    }
+  }, [navigate]);
 
   const validateEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
