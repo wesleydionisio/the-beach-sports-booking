@@ -467,7 +467,7 @@ const BookingPage = () => {
                       {selectedDate ? (
                         <>
                           <Typography variant="h6" gutterBottom>
-                            Selecione um Horário:
+                            Horário:
                           </Typography>
                           <TimeSlots 
                             slots={timeSlots} 
@@ -477,7 +477,7 @@ const BookingPage = () => {
                           />
                         </>
                       ) : (
-                        <OptionSkeleton title="Selecione um Horário:" />
+                        <OptionSkeleton title="Horário:" />
                       )}
                     </Box>
                   </Box>
@@ -523,7 +523,7 @@ const BookingPage = () => {
                           />
                         </>
                       ) : (
-                        <OptionSkeleton title="Selecione uma Forma de Pagamento:" />
+                        <OptionSkeleton title="Forma de Pagamento:" />
                       )}
                     </Box>
                   </Box>
