@@ -1,6 +1,6 @@
 // src/components/global/Header.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -22,8 +22,10 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { Link as RouterLink } from 'react-router-dom';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import { AuthContext } from '../../context/AuthContext';
 
 const Header = () => {
+  const { user } = useContext(AuthContext);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [elevate, setElevate] = useState(false);
   const theme = useTheme();
@@ -60,6 +62,54 @@ const Header = () => {
     { label: 'Escola', path: '/escola' },
     { label: 'Contato', path: '/contato' },
   ];
+
+  const AuthButton = () => {
+    if (user) {
+      return (
+        <Button
+          component={RouterLink}
+          to="/perfil"
+          sx={{ 
+            color: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            textTransform: 'none',
+            fontSize: '1rem',
+            '&:hover': {
+              backgroundColor: 'transparent',
+              opacity: 0.8
+            }
+          }}
+        >
+          <PersonOutlineIcon sx={{ fontSize: 24 }} />
+          <span>Olá, {user.nome || user.email}!</span>
+        </Button>
+      );
+    }
+
+    return (
+      <Button
+        component={RouterLink}
+        to="/login"
+        sx={{ 
+          color: 'inherit',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          textTransform: 'none',
+          fontSize: '1rem',
+          '&:hover': {
+            backgroundColor: 'transparent',
+            opacity: 0.8
+          }
+        }}
+      >
+        <PersonOutlineIcon sx={{ fontSize: 24 }} />
+        <span>Entrar / Cadastrar</span>
+      </Button>
+    );
+  };
 
   const DrawerContent = () => (
     <Box
@@ -126,7 +176,7 @@ const Header = () => {
         ))}
       </List>
 
-      {/* Botão de Login */}
+      {/* Botão de Login/Perfil */}
       <Box sx={{ 
         mt: 'auto',
         p: 4,
@@ -135,26 +185,49 @@ const Header = () => {
         justifyContent: 'center'
       }}>
         <Fade in={isDrawerOpen} timeout={600}>
-          <Button
-            component={RouterLink}
-            to="/login"
-            onClick={toggleDrawer(false)}
-            sx={{ 
-              color: 'text.primary',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              textTransform: 'none',
-              fontSize: '1.1rem',
-              '&:hover': {
-                backgroundColor: 'transparent',
-                opacity: 0.8
-              }
-            }}
-          >
-            <PersonOutlineIcon sx={{ fontSize: 28 }} />
-            <span>Entrar / Cadastrar</span>
-          </Button>
+          {user ? (
+            <Button
+              component={RouterLink}
+              to="/perfil"
+              onClick={toggleDrawer(false)}
+              sx={{ 
+                color: 'text.primary',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                textTransform: 'none',
+                fontSize: '1.1rem',
+                '&:hover': {
+                  backgroundColor: 'transparent',
+                  opacity: 0.8
+                }
+              }}
+            >
+              <PersonOutlineIcon sx={{ fontSize: 28 }} />
+              <span>Olá, {user.nome || user.email}!</span>
+            </Button>
+          ) : (
+            <Button
+              component={RouterLink}
+              to="/login"
+              onClick={toggleDrawer(false)}
+              sx={{ 
+                color: 'text.primary',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                textTransform: 'none',
+                fontSize: '1.1rem',
+                '&:hover': {
+                  backgroundColor: 'transparent',
+                  opacity: 0.8
+                }
+              }}
+            >
+              <PersonOutlineIcon sx={{ fontSize: 28 }} />
+              <span>Entrar / Cadastrar</span>
+            </Button>
+          )}
         </Fade>
       </Box>
     </Box>
@@ -251,27 +324,7 @@ const Header = () => {
           )}
 
           {/* Botão de Login Desktop */}
-          {!isMobile && (
-            <Button
-              component={RouterLink}
-              to="/login"
-              sx={{ 
-                color: 'inherit',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                textTransform: 'none',
-                fontSize: '1rem',
-                '&:hover': {
-                  backgroundColor: 'transparent',
-                  opacity: 0.8
-                }
-              }}
-            >
-              <PersonOutlineIcon sx={{ fontSize: 24 }} />
-              <span>Entrar / Cadastrar</span>
-            </Button>
-          )}
+          {!isMobile && <AuthButton />}
 
           {/* Menu Mobile */}
           {isMobile && (
