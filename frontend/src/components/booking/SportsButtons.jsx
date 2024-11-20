@@ -7,7 +7,6 @@ import SportsBasketballIcon from '@mui/icons-material/SportsBasketball';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 
 const SportsButtons = ({ sports, selectedSport, onSportSelect }) => {
-  // Mapa de ícones para cada esporte
   const sportIcons = {
     'Tênis': <SportsTennisIcon />,
     'Vôlei': <SportsVolleyballIcon />,
@@ -16,19 +15,31 @@ const SportsButtons = ({ sports, selectedSport, onSportSelect }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 2 
+    }}>
       {sports.map((sport) => (
         <Button
-          key={sport._id} // Assumindo que cada esporte tem um _id
+          key={sport._id}
           variant={selectedSport === sport._id ? "contained" : "outlined"}
+          color="primary"
           onClick={() => onSportSelect(sport._id)}
-          startIcon={sportIcons[sport.nome]} // Usando o nome do esporte para pegar o ícone
-          sx={{
-            minWidth: '120px',
-            py: 1,
+          startIcon={sportIcons[sport.nome]}
+          sx={{ 
+            justifyContent: 'flex-start',
+            minWidth: 'auto',
+            flex: '0 0 auto',
+            '& .MuiSvgIcon-root': {
+              color: 'inherit',
+              width: 20,
+              height: 20
+            }
           }}
         >
-          {sport.nome} {/* Usando o nome do esporte */}
+          {sport.nome}
         </Button>
       ))}
     </Box>

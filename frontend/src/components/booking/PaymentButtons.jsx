@@ -72,7 +72,12 @@ const PaymentButtons = ({ onPaymentSelect, selectedPayment }) => {
   }, []);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 2 
+    }}>
       {loading ? (
         <CircularProgress />
       ) : (
@@ -93,8 +98,8 @@ const PaymentButtons = ({ onPaymentSelect, selectedPayment }) => {
                       display: 'flex',
                       alignItems: 'center',
                       '& img': {
-                        width: 24,
-                        height: 24,
+                        width: 20,
+                        height: 20,
                         filter: isSelected ? 'brightness(0) invert(1)' : 'none'
                       }
                     }}
@@ -110,6 +115,9 @@ const PaymentButtons = ({ onPaymentSelect, selectedPayment }) => {
               }
               sx={{ 
                 justifyContent: 'flex-start',
+                minWidth: 'auto',
+                flex: '0 0 auto',
+                px: 2,
                 '& .MuiSvgIcon-root': {
                   color: 'inherit'
                 }

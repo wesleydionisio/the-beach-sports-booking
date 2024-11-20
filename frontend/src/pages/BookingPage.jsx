@@ -243,25 +243,21 @@ const BookingPage = () => {
     <>
       <Grid 
         container 
+        spacing={0}
         sx={{ 
           minHeight: '100vh',
-          position: 'relative'
+          backgroundColor: 'background.default'
         }}
       >
-        {/* Coluna Esquerda */}
+        {/* Coluna Esquerda - Imagens */}
         <Grid 
           item 
           xs={12} 
-          md={7} 
-          sx={{
+          md={4}
+          sx={{ 
             position: 'relative',
             height: { xs: 'auto', md: '100vh' },
-            overflow: { xs: 'visible', md: 'hidden' },
-            pt: { xs: 14, md: 0 },
-            pb: { xs: 4, md: 0 },
-            display: { xs: 'block', md: 'flex' }, // Adiciona flex apenas no desktop
-            alignItems: { md: 'center' }, // Centraliza verticalmente no desktop
-            justifyContent: { md: 'center' }, // Centraliza horizontalmente no desktop
+            backgroundColor: 'primary.main',
           }}
         >
           {/* Background com overlay */}
@@ -417,28 +413,28 @@ const BookingPage = () => {
           </Box>
         </Grid>
 
-        {/* Coluna Direita */}
+        {/* Coluna Direita - Formulário */}
         <Grid 
           item 
           xs={12} 
-          md={5} 
+          md={8}
           sx={{
-            height: { md: '100vh' },
+            minHeight: '100vh',
+            height: { xs: 'auto', md: '100vh' },
             position: 'relative',
             display: 'flex',
             flexDirection: 'column',
             backgroundColor: 'background.paper',
+            pt: { xs: 4, md: '80px' },
+            px: { xs: 2, md: 6 },
+            pb: { xs: 4, md: 6 },
           }}
         >
           <Box 
             sx={{ 
-              p: 4,
               flex: 1,
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'center', // Centraliza verticalmente
-              position: 'relative',
-              overflowY: 'auto', // Permite rolagem se o conteúdo for muito grande
               height: '100%',
             }}
           >
@@ -446,139 +442,94 @@ const BookingPage = () => {
               <Box
                 sx={{
                   width: '100%',
-                  maxWidth: '600px',
-                  mx: 'auto', // Centraliza horizontalmente
+                  height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 2,
-                  py: { md: 2 },
+                  gap: 4,
                 }}
               >
-                {/* Container Superior */}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                  }}
-                >
-                  {/* Título e Subtítulo */}
-                  <Box sx={{ 
-                    mb: 1,
-                    mt: { xs: 4, md: 0 }
-                  }}> 
-                    <Typography 
-                      variant="h4" 
-                      component="h2" 
-                      sx={{ 
-                        fontWeight: 600, 
-                        mb: 0.5,
-                      }}
-                    >
-                      Faça a sua reserva
-                    </Typography>
-                    <Typography 
-                      variant="subtitle1" 
-                      color="text.secondary"
-                      sx={{ fontSize: '1.1rem' }}
-                    >
-                      Comece escolhendo uma data
-                    </Typography>
-                  </Box>
+                {/* Título */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="h4" component="h2" sx={{ fontWeight: 600 }}>
+                    Faça a sua reserva
+                  </Typography>
+                  <Typography variant="subtitle1" color="text.secondary">
+                    Comece escolhendo uma data
+                  </Typography>
+                </Box>
 
-                  {/* Calendário e Time Slots em linha */}
-                  <Box sx={{ 
-                    display: { xs: 'block', md: 'flex' }, 
-                    gap: 2,
-                    position: 'relative',
-                    zIndex: 3,
-                  }}>
-                    {/* Calendário */}
+                {/* Grid Container */}
+                <Grid container spacing={4}>
+                  {/* Primeira Linha */}
+                  <Grid item xs={12} md={6}>
                     <Box sx={{ 
-                      flex: 1,
-                      position: 'relative',
-                      zIndex: 4,
+                      height: '350px',
                       backgroundColor: 'background.paper',
                       borderRadius: 1,
                       ...((!selectedDate) && glowEffect(theme)),
                     }}>
-
                       <BookingCalendar 
                         selectedDate={selectedDate}
                         onDateChange={handleDateChange}
                         quadraId={quadraId}
                       />
                     </Box>
+                  </Grid>
 
-                    {/* Time Slots */}
-                    <Box sx={{ flex: 1, mt: { xs: 2, md: 0 } }}>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ height: '350px' }}>
                       {selectedDate ? (
-                        <>
-                          <Typography variant="h6" gutterBottom>
-                            Horário:
-                          </Typography>
-                          <TimeSlots 
-                            slots={timeSlots} 
-                            onSlotSelect={setSelectedSlot}
-                            selectedSlot={selectedSlot}
-                            showGlow={selectedDate && !selectedSlot}
-                          />
-                        </>
+                        <TimeSlots 
+                          slots={timeSlots} 
+                          onSlotSelect={setSelectedSlot}
+                          selectedSlot={selectedSlot}
+                          showGlow={selectedDate && !selectedSlot}
+                        />
                       ) : (
                         <OptionSkeleton title="Horário:" />
                       )}
                     </Box>
-                  </Box>
+                  </Grid>
 
-                  {/* Container de Esportes e Pagamento */}
-                  <Box 
-                    sx={{ 
-                      display: { xs: 'flex', md: 'flex' },
-                      flexDirection: { xs: 'column', md: 'row' },
-                      gap: 2,
-                    }}
-                  >
-                    {/* Botões de Esportes */}
-                    <Box sx={{ flex: 1 }}>
-                      {selectedDate && selectedSlot ? (
-                        <>
-                          <Typography variant="h6" gutterBottom>
-                            Selecione um Esporte:
-                          </Typography>
-                          <SportsButtons
-                            sports={court.esportes_permitidos || []}
-                            selectedSport={selectedSport}
-                            onSportSelect={setSelectedSport}
-                            showGlow={selectedDate && selectedSlot && !selectedSport}
-                          />
-                        </>
-                      ) : (
-                        <OptionSkeleton title="Esporte:" />
-                      )}
-                    </Box>
+                  {/* Segunda Linha */}
+                  <Grid item xs={12} md={6}>
+                    {selectedDate && selectedSlot ? (
+                      <>
+                        <Typography variant="h6" gutterBottom>
+                          Selecione um Esporte:
+                        </Typography>
+                        <SportsButtons
+                          sports={court.esportes_permitidos || []}
+                          selectedSport={selectedSport}
+                          onSportSelect={setSelectedSport}
+                          showGlow={selectedDate && selectedSlot && !selectedSport}
+                        />
+                      </>
+                    ) : (
+                      <OptionSkeleton title="Esporte:" />
+                    )}
+                  </Grid>
 
-                    {/* Botões de Pagamento */}
-                    <Box sx={{ flex: 1 }}>
-                      {selectedDate && selectedSlot && selectedSport ? (
-                        <>
-                          <Typography variant="h6" gutterBottom>
-                            Forma de Pagamento:
-                          </Typography>
-                          <PaymentButtons
-                            selectedPayment={selectedPayment}
-                            onPaymentSelect={setSelectedPayment}
-                            showGlow={selectedDate && selectedSlot && selectedSport && !selectedPayment}
-                          />
-                        </>
-                      ) : (
-                        <OptionSkeleton title="Forma de Pagamento:" />
-                      )}
-                    </Box>
-                  </Box>
-                </Box>
+                  <Grid item xs={12} md={6}>
+                    {selectedDate && selectedSlot && selectedSport ? (
+                      <>
+                        <Typography variant="h6" gutterBottom>
+                          Forma de Pagamento:
+                        </Typography>
+                        <PaymentButtons
+                          selectedPayment={selectedPayment}
+                          onPaymentSelect={setSelectedPayment}
+                          showGlow={selectedDate && selectedSlot && selectedSport && !selectedPayment}
+                        />
+                      </>
+                    ) : (
+                      <OptionSkeleton title="Forma de Pagamento:" />
+                    )}
+                  </Grid>
+                </Grid>
 
-                {/* Container Inferior - Botão de Confirmar */}
-                <Box sx={{ mt: 2 }}>
+                {/* Botão de Confirmar */}
+                <Box sx={{ mt: 'auto', pt: 2 }}>
                   <Button
                     variant="contained"
                     color="primary"
@@ -593,21 +544,13 @@ const BookingPage = () => {
                       right: { xs: 0, md: 'auto' },
                       py: 2,
                       fontSize: '1.1rem',
-                      width: '100%',
-                      opacity: (!selectedDate || !selectedSlot || !selectedSport || !selectedPayment) ? 0.5 : 1,
-                      transition: 'opacity 0.3s ease-in-out',
                       borderRadius: { xs: 0, md: 1 },
-                      backgroundColor: 'primary.main',
-                      boxShadow: { xs: '0px -2px 8px rgba(0,0,0,0.1)', md: 'none' },
                       zIndex: 1000,
                     }}
                   >
                     Confirmar Reserva
                   </Button>
                 </Box>
-
-                {/* Espaço para compensar o botão fixo em mobile */}
-                <Box sx={{ height: { xs: '80px', md: 0 } }} />
               </Box>
             ) : (
               <Box display="flex" justifyContent="center" alignItems="center">
