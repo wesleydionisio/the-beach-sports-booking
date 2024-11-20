@@ -101,24 +101,32 @@ const BookingPage = () => {
   // Função para gerar slots de horário
 
 
-  const generateTimeSlots = (reservas) => {
-    // Filtrar apenas reservas que não estão canceladas
-    const reservasAtivas = reservas.filter(reserva => reserva.status !== 'cancelada');
-  
+  const generateTimeSlots = (reservas, horariosNobres = []) => {
+    console.log('Horários nobres recebidos:', horariosNobres);
+    
     const slots = [];
     for (let hour = horarioInicio; hour < horarioFim; hour++) {
       const slotInicio = `${hour.toString().padStart(2, '0')}:00`;
       const slotFim = `${(hour + duracao).toString().padStart(2, '0')}:00`;
   
-      const isReserved = reservasAtivas.some(
+      const isReserved = reservas.some(
         (reserva) =>
           (reserva.inicio <= slotInicio && reserva.fim > slotInicio) ||
           (reserva.inicio < slotFim && reserva.fim >= slotFim)
       );
   
-      slots.push({ horario_inicio: slotInicio, horario_fim: slotFim, available: !isReserved });
+      const isNobre = horariosNobres.includes(slotInicio);
+      console.log(`Slot ${slotInicio} é nobre? ${isNobre}`);
+  
+      slots.push({
+        horario_inicio: slotInicio,
+        horario_fim: slotFim,
+        available: !isReserved,
+        horario_nobre: isNobre
+      });
     }
-    console.log('Slots gerados:', slots); // Log para verificar
+    
+    console.log('Slots gerados:', slots);
     return slots;
   };
 
@@ -131,13 +139,19 @@ const BookingPage = () => {
         params: { data: formattedDate },
       });
 
+      console.log('Resposta da API:', response.data);
+      
       const reservas = response.data.horarios_agendados || [];
-      console.log('Reservas recebidas:', reservas);
-      const slots = generateTimeSlots(reservas);
+      const horariosNobres = response.data.horarios_nobres || [];
+      
+      console.log('Reservas:', reservas);
+      console.log('Horários nobres:', horariosNobres);
+      
+      const slots = generateTimeSlots(reservas, horariosNobres);
       setTimeSlots(slots);
     } catch (error) {
-      console.error('Erro ao buscar horários disponíveis:', error);
-      setError('Não foi possível carregar os horários disponíveis.');
+      console.error('Erro ao buscar horários:', error);
+      setError('Erro ao carregar horários disponíveis');
     } finally {
       setLoading(false);
     }

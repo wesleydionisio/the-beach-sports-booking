@@ -40,6 +40,45 @@ const verificarDisponibilidade = async (quadra_id, data, horario_inicio, horario
   return reservasExistentes.length === 0;
 };
 
+// Função auxiliar para calcular horários nobres
+const calcularHorariosNobres = async (quadraId, dataReferencia) => {
+  try {
+    // Calcular início e fim da semana
+    const inicioSemana = new Date(dataReferencia);
+    inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+    const fimSemana = new Date(inicioSemana);
+    fimSemana.setDate(fimSemana.getDate() + 6);
+
+    // Buscar todas as reservas da semana
+    const reservasSemana = await Booking.find({
+      quadra_id: quadraId,
+      data: {
+        $gte: inicioSemana,
+        $lte: fimSemana
+      },
+      status: { $ne: 'cancelada' }
+    });
+
+    // Contagem de frequência dos horários
+    const frequenciaHorarios = {};
+    reservasSemana.forEach(reserva => {
+      const horario = reserva.horario_inicio;
+      frequenciaHorarios[horario] = (frequenciaHorarios[horario] || 0) + 1;
+    });
+
+    // Ordenar horários por frequência e pegar os 2 mais frequentes
+    const horariosNobres = Object.entries(frequenciaHorarios)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(entry => entry[0]);
+
+    return horariosNobres;
+  } catch (error) {
+    console.error('Erro ao calcular horários nobres:', error);
+    return [];
+  }
+};
+
 // Função para criar uma reserva
 exports.createBooking = async (req, res) => {
   try {
@@ -194,27 +233,29 @@ exports.getReservedTimes = async (req, res) => {
     if (!quadra) {
       return res.status(404).json({
         success: false,
-        message: 'Quadra não encontrada.',
+        message: 'Quadra não encontrada.'
       });
     }
 
-    // Usar a data fornecida ou o dia atual
     const dia = data || new Date().toISOString().split('T')[0];
+    
+    // Calcular horários nobres
+    const horariosNobres = await calcularHorariosNobres(quadraId, new Date(dia));
+    console.log('Horários nobres calculados:', horariosNobres);
 
-    // Buscar reservas para a quadra na data especificada, excluindo canceladas
+    // Buscar reservas do dia
     const reservas = await Booking.find({
       quadra_id: quadraId,
       data: dia,
-      status: { $ne: 'cancelada' }, // Excluir reservas canceladas
+      status: { $ne: 'cancelada' }
     });
 
-    console.log(`Reservas para quadra ${quadraId} na data ${dia}:`, reservas);
+    console.log('Reservas encontradas:', reservas);
 
-    // Formatar os horários agendados
-    const horariosAgendados = reservas.map((reserva) => ({
+    const horariosAgendados = reservas.map(reserva => ({
       inicio: reserva.horario_inicio,
       fim: reserva.horario_fim,
-      status: reserva.status,
+      status: reserva.status
     }));
 
     res.status(200).json({
@@ -222,12 +263,13 @@ exports.getReservedTimes = async (req, res) => {
       quadra_id: quadraId,
       data: dia,
       horarios_agendados: horariosAgendados,
+      horarios_nobres: horariosNobres // Incluindo na resposta
     });
   } catch (err) {
-    console.error('Erro ao buscar horários agendados:', err);
+    console.error('Erro ao buscar horários:', err);
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar horários agendados.',
+      message: 'Erro ao buscar horários.'
     });
   }
 };

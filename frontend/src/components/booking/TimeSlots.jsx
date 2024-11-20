@@ -43,6 +43,7 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot }) => {
       >
         {slots.map((slot) => {
           const isSelected = selectedSlot && selectedSlot.horario_inicio === slot.horario_inicio;
+          const isNobre = slot.horario_nobre;
           
           return (
             <Button
@@ -98,8 +99,8 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot }) => {
                 {slot.horario_inicio} - {slot.horario_fim}
               </Typography>
 
-              {/* Label Nobre */}
-              {slot.available && (
+              {/* Label Nobre - só aparece se for horário nobre */}
+              {isNobre && slot.available && (
                 <Box sx={{ 
                   display: 'flex', 
                   alignItems: 'center',
@@ -114,16 +115,12 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot }) => {
                 }}>
                   <LocalFireDepartmentIcon sx={{ 
                     fontSize: 12,
-                    color: isSelected 
-                      ? '#fff' 
-                      : '#FF6B00'
+                    color: isSelected ? '#fff' : '#FF6B00'
                   }} />
                   <Typography 
                     variant="caption" 
                     sx={{ 
-                      color: isSelected 
-                        ? '#fff' 
-                        : '#FF6B00',
+                      color: isSelected ? '#fff' : '#FF6B00',
                       fontWeight: 600,
                       fontSize: 10,
                       lineHeight: 1
