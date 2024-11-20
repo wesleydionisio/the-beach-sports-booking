@@ -9,7 +9,8 @@ import {
   Grid,
   Chip,
   Stack,
-  Skeleton
+  Skeleton,
+  Fade
 } from '@mui/material';
 import SportsTennisIcon from '@mui/icons-material/SportsTennis';
 import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
@@ -28,8 +29,11 @@ import "yet-another-react-lightbox/styles.css";
 import { useTheme } from '@mui/material/styles';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br'; // Importando localização brasileira
-import customParseFormat from 'dayjs/plugin/customParseFormat'; // Para parsing de formato personalizado
+import customParseFormat from 'dayjs/plugin/customParseFormat'; // Pax`ra parsing de formato personalizado
 import utc from 'dayjs/plugin/utc'; // Para manipulação de UTC
+import BookingSummary from '../components/booking/BookingSummary';
+import BookingModals from '../components/booking/BookingModals';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 const OptionSkeleton = ({ title }) => (
   <Box>
@@ -49,6 +53,30 @@ const glowEffect = (theme) => ({
   transition: 'all 0.3s ease-in-out'
 });
 
+// Estilo comum para os botões de confirmação
+const confirmButtonStyles = {
+  mt: 'auto',
+  py: 2,
+  fontSize: '1.1rem',
+  borderRadius: { xs: 0, md: 1 },
+  position: { xs: 'fixed', md: 'static' },
+  bottom: { xs: 0, md: 'auto' },
+  left: { xs: 0, md: 'auto' },
+  right: { xs: 0, md: 'auto' },
+  zIndex: 1000,
+  backgroundColor: 'primary.main',
+  color: 'white',
+  '&:hover': {
+    backgroundColor: 'primary.dark',
+  },
+  '&.Mui-disabled': {
+    background: 'linear-gradient(90deg, #393939 0%, #A9A9A9 100%) !important',
+    color: 'white',
+    opacity: 1,
+    cursor: 'not-allowed',
+  }
+};
+
 const BookingPage = () => {
   const { quadraId } = useParams();
   const navigate = useNavigate();
@@ -64,6 +92,7 @@ const BookingPage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const theme = useTheme();
+  const [bookingStep, setBookingStep] = useState(1);
 
   const horarioInicio = 8;
   const horarioFim = 22;
@@ -127,7 +156,7 @@ const BookingPage = () => {
     const token = localStorage.getItem('authToken');
     
     if (!token) {
-      console.log('⚠️ Usuário não autenticado, salvando dados...');
+      console.log('⚠️ Usuário no autenticado, salvando dados...');
       const bookingData = {
         quadraId,
         date: selectedDate.format('YYYY-MM-DD'),
@@ -241,23 +270,24 @@ const BookingPage = () => {
 
   return (
     <>
-      <Grid 
-        container 
-        spacing={0}
+      <Box 
         sx={{ 
           minHeight: '100vh',
-          backgroundColor: 'background.default'
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          maxWidth: '100vw',
+          overflow: 'hidden'
         }}
       >
-        {/* Coluna Esquerda - Imagens */}
-        <Grid 
-          item 
-          xs={12} 
-          md={4}
-          sx={{ 
+        {/* Coluna Esquerda */}
+        <Box
+          sx={{
+            width: { md: '40%' },
             position: 'relative',
-            height: { xs: 'auto', md: '100vh' },
-            backgroundColor: 'primary.main',
+            height: { xs: 'auto', md: 'auto' },
+            backgroundColor: 'background.paper',
+            py: { xs: '30px', md: 0 },
+            pt: { xs: '96px', md: 0 },
           }}
         >
           {/* Background com overlay */}
@@ -265,12 +295,13 @@ const BookingPage = () => {
             sx={{
               position: 'absolute',
               top: 0,
-              left: 0,
+              left: 0,  
               right: 0,
               bottom: 0,
               backgroundImage: court ? `url(${court.foto_principal})` : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
+              filter: 'grayscale(100%)',
               '&::before': {
                 content: '""',
                 position: 'absolute',
@@ -278,7 +309,7 @@ const BookingPage = () => {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
               }
             }}
           />
@@ -288,15 +319,11 @@ const BookingPage = () => {
             sx={{
               position: 'relative',
               height: '100%',
-              display: 'flex',
+              px: { md: 8 },
+              display: 'flex',  
               flexDirection: 'column',
-              justifyContent: 'center',
               alignItems: { xs: 'center', md: 'flex-start' },
-              p: { xs: 1 },
-              pl: { md: 8 },
-              pr: { md: 8 },
-              pt: { md: 8 },
-              pb: { md: 8 },
+              justifyContent: { md: 'center' },
             }}
           >
             {/* Container do Título e Esportes */}
@@ -335,6 +362,8 @@ const BookingPage = () => {
                     label={esporte.nome}
                     sx={{
                       backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(4px)',
                       color: 'white',
                       '& .MuiChip-icon': {
                         color: 'white'
@@ -411,155 +440,237 @@ const BookingPage = () => {
               </Slider>
             </Box>
           </Box>
-        </Grid>
+        </Box>
 
-        {/* Coluna Direita - Formulário */}
-        <Grid 
-          item 
-          xs={12} 
-          md={8}
+        {/* Coluna Direita */}
+        <Box
           sx={{
-            minHeight: '100vh',
-            height: { xs: 'auto', md: '100vh' },
-            position: 'relative',
+            width: { md: '60%' },
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: 'background.paper',
-            pt: { xs: 4, md: '80px' },
-            px: { xs: 2, md: 6 },
-            pb: { xs: 4, md: 6 },
+            pt: { xs: 8, md: 0 },
+            pb: { xs: 8, md: 6 },
+            px: { xs: 2, md: '56px' },
+            justifyContent: { md: 'center' },
+            height: { xs: 'auto', md: 'auto' },
+            boxSizing: 'border-box',
           }}
         >
-          <Box 
-            sx={{ 
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-            }}
-          >
-            {court ? (
-              <Box
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
-                }}
-              >
-                {/* Título */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="h4" component="h2" sx={{ fontWeight: 600 }}>
-                    Faça a sua reserva
+          {/* Steps com Fade */}
+          {bookingStep === 1 ? (
+            <Fade in={bookingStep === 1} timeout={300}>
+              <div>
+                <Box sx={{ mb: 3 }}>
+                  <Typography 
+                    variant="h4" 
+                    component="h1" 
+                    sx={{ mb: 0, fontWeight: 550 }}
+                  >
+                    Faça sua reserva
                   </Typography>
-                  <Typography variant="subtitle1" color="text.secondary">
+                  <Typography 
+                    variant="subtitle1" 
+                    color="text.secondary"
+                    sx={{ mt: 0 }}
+                  >
                     Comece escolhendo uma data
                   </Typography>
                 </Box>
 
-                {/* Grid Container */}
-                <Grid container spacing={4}>
-                  {/* Primeira Linha */}
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ 
-                      height: '350px',
-                      backgroundColor: 'background.paper',
-                      borderRadius: 1,
-                      ...((!selectedDate) && glowEffect(theme)),
-                    }}>
+                <Box sx={{ 
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0
+                }}>
+                  {/* Container do Calendar e TimeSlots */}
+                  <Box sx={{ 
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    gap: { xs: 0, md: 3 }
+                  }}>
+                    {/* Calendário */}
+                    <Box 
+                      sx={{ 
+                        flex: { xs: '1 1 auto', md: '1 1 50%' },
+                        backgroundColor: 'background.paper',
+                        borderRadius: { xs: '4px 4px 0 0', md: 1 }, // Borda arredondada apenas em cima no mobile
+                        padding: 2,
+                        paddingBottom: { xs: 0, md: 2 }, // Remove padding bottom no mobile
+                        height: { xs: 'auto', md: '343px' },
+                        ...((!selectedDate) && glowEffect(theme)),
+                      }}
+                    >
                       <BookingCalendar 
                         selectedDate={selectedDate}
                         onDateChange={handleDateChange}
                         quadraId={quadraId}
                       />
                     </Box>
-                  </Grid>
 
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ height: '350px' }}>
+                    {/* TimeSlots */}
+                    <Box 
+                      sx={{ 
+                        flex: { xs: '1 1 auto', md: '1 1 50%' },
+                        backgroundColor: 'background.paper',
+                        borderRadius: { xs: '0 0 4px 4px', md: 1 }, // Borda arredondada apenas embaixo no mobile
+                        padding: 2,
+                        paddingTop: { xs: 0, md: 2 }, // Remove padding top no mobile
+                        height: { xs: '380px', md: '343px' },
+                      }}
+                    >
                       {selectedDate ? (
                         <TimeSlots 
                           slots={timeSlots} 
                           onSlotSelect={setSelectedSlot}
                           selectedSlot={selectedSlot}
-                          showGlow={selectedDate && !selectedSlot}
                         />
                       ) : (
                         <OptionSkeleton title="Horário:" />
                       )}
                     </Box>
-                  </Grid>
+                  </Box>
 
-                  {/* Segunda Linha */}
-                  <Grid item xs={12} md={6}>
-                    {selectedDate && selectedSlot ? (
-                      <>
-                        <Typography variant="h6" gutterBottom>
-                          Selecione um Esporte:
+                  {/* Botão de Confirmação */}
+                  <Box>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      disabled={!selectedDate || !selectedSlot}
+                      onClick={() => setBookingStep(2)}
+                      sx={confirmButtonStyles}
+                    >
+                      <Box sx={{ 
+                        width: '100%',
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        {selectedDate && selectedSlot ? (
+                          <>
+                            <Typography variant="body1">
+                              {selectedSlot.horario_inicio}h • {dayjs(selectedDate).format('DD/MM/YYYY')}
+                            </Typography>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center',
+                              gap: 1
+                            }}>
+                              <Typography variant="body1">
+                                R$ 120,00
+                              </Typography>
+                              <ArrowForwardIcon />
+                            </Box>
+                          </>
+                        ) : (
+                          <Typography variant="body1" sx={{ width: '100%', textAlign: 'center' }}>
+                            Selecione uma data e horário
+                          </Typography>
+                        )}
+                      </Box>
+                    </Button>
+                  </Box>
+                </Box>
+              </div>
+            </Fade>
+          ) : (
+            <Fade in={bookingStep === 2} timeout={300}>
+              <div>
+                <Box sx={{ mb: 3 }}>
+                  <Typography 
+                    variant="h4" 
+                    component="h1" 
+                    sx={{ mb: 0, fontWeight: 550 }}
+                  >
+                    Faça sua reserva
+                  </Typography>
+                  <Typography 
+                    variant="subtitle1" 
+                    color="text.secondary"
+                    sx={{ mt: 0, mb: 0 }}
+                  >
+                    Escolha os detalhes
+                  </Typography>
+                </Box>
+
+                <Box sx={{ 
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0
+                }}>
+                  {/* Resumo */}
+                  <BookingSummary 
+                    selectedDate={selectedDate}
+                    selectedSlot={selectedSlot}
+                    court={court}
+                    onEdit={() => setBookingStep(1)}
+                  />
+                  
+                  {/* Opções Adicionais */}
+                  <Box sx={{ mb: 0 }}>
+                    <Typography variant="h6" sx={{ mb: 1, mt: 1, fontWeight: 550 }}>
+                      Opções adicionais:
+                    </Typography>
+                    <BookingModals />
+                  </Box>
+
+                  {/* Seleção de Esporte e Pagamento */}
+                  <Grid 
+                    container 
+                    spacing={3} 
+                    sx={{ 
+                      mt: 0,
+                      height: 'auto', // Ajusta a altura para o conteúdo
+                      '& .MuiGrid-item': {
+                        paddingTop: 0 // Remove o padding superior dos itens do grid
+                      }
+                    }}
+                  >
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ mb: 0 }}>
+                        <Typography variant="h6" sx={{ mb: 1, fontWeight: 550 }}>
+                          Selecione um esporte:
                         </Typography>
                         <SportsButtons
-                          sports={court.esportes_permitidos || []}
+                          sports={court?.esportes_permitidos || []}
                           selectedSport={selectedSport}
                           onSportSelect={setSelectedSport}
-                          showGlow={selectedDate && selectedSlot && !selectedSport}
                         />
-                      </>
-                    ) : (
-                      <OptionSkeleton title="Esporte:" />
-                    )}
-                  </Grid>
+                      </Box>
+                    </Grid>
 
-                  <Grid item xs={12} md={6}>
-                    {selectedDate && selectedSlot && selectedSport ? (
-                      <>
-                        <Typography variant="h6" gutterBottom>
-                          Forma de Pagamento:
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ mb: 0 }}>
+                        <Typography variant="h6" sx={{ mb: 1, fontWeight: 550 }}>
+                          Forma de pagamento:
                         </Typography>
                         <PaymentButtons
                           selectedPayment={selectedPayment}
                           onPaymentSelect={setSelectedPayment}
-                          showGlow={selectedDate && selectedSlot && selectedSport && !selectedPayment}
                         />
-                      </>
-                    ) : (
-                      <OptionSkeleton title="Forma de Pagamento:" />
-                    )}
+                      </Box>
+                    </Grid>
                   </Grid>
-                </Grid>
 
-                {/* Botão de Confirmar */}
-                <Box sx={{ mt: 'auto', pt: 2 }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    size="large"
-                    onClick={handleConfirmReservation}
-                    disabled={!selectedDate || !selectedSlot || !selectedSport || !selectedPayment}
-                    fullWidth
-                    sx={{
-                      position: { xs: 'fixed', md: 'static' },
-                      bottom: { xs: 0, md: 'auto' },
-                      left: { xs: 0, md: 'auto' },
-                      right: { xs: 0, md: 'auto' },
-                      py: 2,
-                      fontSize: '1.1rem',
-                      borderRadius: { xs: 0, md: 1 },
-                      zIndex: 1000,
-                    }}
-                  >
-                    Confirmar Reserva
-                  </Button>
+                  {/* Botão de Confirmar Reserva */}
+                  <Box>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      disabled={!selectedSport || !selectedPayment}
+                      onClick={handleConfirmReservation}
+                      sx={confirmButtonStyles}
+                    >
+                      <Typography variant="body1">
+                        {selectedSport && selectedPayment ? 'Confirmar reserva' : 'Selecione as opções'}
+                      </Typography>
+                    </Button>
+                  </Box>
                 </Box>
-              </Box>
-            ) : (
-              <Box display="flex" justifyContent="center" alignItems="center">
-                <CircularProgress />
-              </Box>
-            )}
-          </Box>
-        </Grid>
-      </Grid>
+              </div>
+            </Fade>
+          )}
+        </Box>
+      </Box>
     </>
   );
 };

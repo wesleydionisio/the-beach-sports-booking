@@ -1,6 +1,6 @@
 // src/components/booking/PaymentButtons.jsx
 import React, { useEffect, useState } from 'react';
-import { Box, Button, CircularProgress } from '@mui/material';
+import { Box, Button, CircularProgress, Typography } from '@mui/material';
 import axios from '../../api/apiService';
 import PaymentIcon from '@mui/icons-material/Payment';
 import { blue, red, purple, indigo } from '@mui/material/colors';
@@ -72,62 +72,64 @@ const PaymentButtons = ({ onPaymentSelect, selectedPayment }) => {
   }, []);
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 2 
-    }}>
-      {loading ? (
-        <CircularProgress />
-      ) : (
-        paymentMethods.map((method) => {
-          const isSelected = selectedPayment === method._id;
-          
-          return (
-            <Button
-              key={method._id}
-              variant={isSelected ? "contained" : "outlined"}
-              color="primary"
-              onClick={() => onPaymentSelect(method._id)}
-              startIcon={
-                icons[method.label] ? (
-                  <Box
-                    component="span"
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      '& img': {
-                        width: 20,
-                        height: 20,
-                        filter: isSelected ? 'brightness(0) invert(1)' : 'none'
-                      }
-                    }}
-                  >
-                    <img 
-                      src={icons[method.label]} 
-                      alt={method.label}
-                    />
-                  </Box>
-                ) : (
-                  <PaymentIcon color="inherit" />
-                )
-              }
-              sx={{ 
-                justifyContent: 'flex-start',
-                minWidth: 'auto',
-                flex: '0 0 auto',
-                px: 2,
-                '& .MuiSvgIcon-root': {
-                  color: 'inherit'
+    <Box sx={{ mb: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 2 
+      }}>
+        {loading ? (
+          <CircularProgress />
+        ) : (
+          paymentMethods.map((method) => {
+            const isSelected = selectedPayment === method._id;
+            
+            return (
+              <Button
+                key={method._id}
+                variant={isSelected ? "contained" : "outlined"}
+                color="primary"
+                onClick={() => onPaymentSelect(method._id)}
+                startIcon={
+                  icons[method.label] ? (
+                    <Box
+                      component="span"
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        '& img': {
+                          width: 20,
+                          height: 20,
+                          filter: isSelected ? 'brightness(0) invert(1)' : 'none'
+                        }
+                      }}
+                    >
+                      <img 
+                        src={icons[method.label]} 
+                        alt={method.label}
+                      />
+                    </Box>
+                  ) : (
+                    <PaymentIcon color="inherit" />
+                  )
                 }
-              }}
-            >
-              {method.label}
-            </Button>
-          );
-        })
-      )}
+                sx={{ 
+                  justifyContent: 'flex-start',
+                  minWidth: 'auto',
+                  flex: '0 0 auto',
+                  px: 2,
+                  '& .MuiSvgIcon-root': {
+                    color: 'inherit'
+                  }
+                }}
+              >
+                {method.label}
+              </Button>
+            );
+          })
+        )}
+      </Box>
     </Box>
   );
 };

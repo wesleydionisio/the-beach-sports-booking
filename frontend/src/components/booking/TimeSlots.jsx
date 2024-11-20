@@ -16,20 +16,9 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot }) => {
     <Box
       sx={{
         position: 'relative',
-        height: { xs: '400px', md: '350px' },
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '40px',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.1), transparent)',
-          opacity: showShadow ? 1 : 0,
-          transition: 'opacity 0.3s ease-in-out',
-          pointerEvents: 'none',
-          zIndex: 1
-        }
+        height: '100%',
+        maxHeight: '343px',
+        overflow: 'hidden'
       }}
     >
       <Stack 
@@ -38,14 +27,18 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot }) => {
         sx={{ 
           height: '100%',
           overflowY: 'auto',
-          msOverflowStyle: 'none',
-          scrollbarWidth: 'none',
+          pr: 1,
           '&::-webkit-scrollbar': {
-            display: 'none',
-            width: 0,
-            background: 'transparent'
+            width: '4px',
           },
-          pb: 0,
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#888',
+            borderRadius: '4px',
+          },
         }}
       >
         {slots.map((slot) => {
