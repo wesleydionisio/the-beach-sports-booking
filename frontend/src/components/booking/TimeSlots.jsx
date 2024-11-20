@@ -44,6 +44,7 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot }) => {
         {slots.map((slot) => {
           const isSelected = selectedSlot && selectedSlot.horario_inicio === slot.horario_inicio;
           const isNobre = slot.horario_nobre;
+          const valor = isNobre ? slot.valor_hora_nobre : slot.valor_hora_padrao;
           
           return (
             <Button
@@ -99,7 +100,7 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot }) => {
                 {slot.horario_inicio} - {slot.horario_fim}
               </Typography>
 
-              {/* Label Nobre - só aparece se for horário nobre */}
+              {/* Label Em alta! - só aparece se for horário nobre e disponível */}
               {isNobre && slot.available && (
                 <Box sx={{ 
                   display: 'flex', 
@@ -126,43 +127,17 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot }) => {
                       lineHeight: 1
                     }}
                   >
-                    Nobre!
+                    Em alta!
                   </Typography>
                 </Box>
               )}
 
               {/* Preço */}
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                gap: 0.5,
-                ml: 'auto'
-              }}>
-                <Typography 
-                  variant="body1" 
-                  sx={{ 
-                    fontWeight: 'bold',
-                    color: isSelected 
-                      ? '#fff' 
-                      : slot.available 
-                        ? '#000' // Preto para slots disponíveis
-                        : 'rgba(0, 0, 0, 0.15)' // Cinza claro para indisponíveis
-                  }}
-                >
-                  R$ 120,00
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
+                <Typography variant="body1" sx={{ fontWeight: 'bold', color: isSelected ? '#fff' : slot.available ? '#000' : 'rgba(0, 0, 0, 0.15)' }}>
+                  {valor ? `R$ ${valor.toFixed(2)}` : 'Preço indisponível'}
                 </Typography>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: isSelected 
-                      ? '#fff' 
-                      : slot.available 
-                        ? '#000' // Preto para slots disponíveis
-                        : 'rgba(0, 0, 0, 0.15)' // Cinza claro para indisponíveis
-                  }}
-                >
-                  /h
-                </Typography>
+                <Typography variant="caption">/h</Typography>
               </Box>
 
               {/* Overlay para slots indisponíveis */}

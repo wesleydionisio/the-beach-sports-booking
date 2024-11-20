@@ -101,32 +101,49 @@ const BookingPage = () => {
   // Função para gerar slots de horário
 
 
-  const generateTimeSlots = (reservas, horariosNobres = []) => {
-    console.log('Horários nobres recebidos:', horariosNobres);
+  const generateTimeSlots = (reservas, horariosNobres = [], config = {}) => {
+    console.log('Gerando slots com:', { reservas, horariosNobres, config });
     
     const slots = [];
+    const valorPadrao = config.valor_hora_padrao || 120;
+    const valorNobre = config.valor_hora_nobre || 150;
+    
+    // Converter horários de funcionamento para números
+    const horarioInicio = parseInt(config.horario_abertura?.split(':')[0]) || 8;
+    const horarioFim = parseInt(config.horario_fechamento?.split(':')[0]) || 23;
+    
+    console.log('Horários de funcionamento:', horarioInicio, 'até', horarioFim);
+    console.log('Reservas existentes:', reservas);
+
     for (let hour = horarioInicio; hour < horarioFim; hour++) {
       const slotInicio = `${hour.toString().padStart(2, '0')}:00`;
-      const slotFim = `${(hour + duracao).toString().padStart(2, '0')}:00`;
-  
+      const slotFim = `${(hour + 1).toString().padStart(2, '0')}:00`;
+
+      // Verificar se o horário está reservado
       const isReserved = reservas.some(
-        (reserva) =>
-          (reserva.inicio <= slotInicio && reserva.fim > slotInicio) ||
-          (reserva.inicio < slotFim && reserva.fim >= slotFim)
+        (reserva) => {
+          const reservaInicio = reserva.inicio;
+          const reservaFim = reserva.fim;
+          return (
+            (reservaInicio <= slotInicio && reservaFim > slotInicio) ||
+            (reservaInicio < slotFim && reservaFim >= slotFim) ||
+            (reservaInicio >= slotInicio && reservaFim <= slotFim)
+          );
+        }
       );
-  
+
       const isNobre = horariosNobres.includes(slotInicio);
-      console.log(`Slot ${slotInicio} é nobre? ${isNobre}`);
-  
+
       slots.push({
         horario_inicio: slotInicio,
         horario_fim: slotFim,
         available: !isReserved,
-        horario_nobre: isNobre
+        horario_nobre: isNobre,
+        valor_hora_padrao: valorPadrao,
+        valor_hora_nobre: valorNobre
       });
     }
     
-    console.log('Slots gerados:', slots);
     return slots;
   };
 
@@ -135,19 +152,25 @@ const BookingPage = () => {
     setLoading(true);
     try {
       const formattedDate = date.format('YYYY-MM-DD');
+      console.log('Buscando slots para quadra:', quadraId, 'data:', formattedDate);
+
       const response = await axios.get(`/bookings/${quadraId}/reserved-times`, {
         params: { data: formattedDate },
       });
 
       console.log('Resposta da API:', response.data);
+
+      const reservas = response.data.horariosReservados || [];
+      const horariosNobres = response.data.horariosNobres || [];
+      const config = response.data.config || {};
       
-      const reservas = response.data.horarios_agendados || [];
-      const horariosNobres = response.data.horarios_nobres || [];
-      
-      console.log('Reservas:', reservas);
-      console.log('Horários nobres:', horariosNobres);
-      
-      const slots = generateTimeSlots(reservas, horariosNobres);
+      console.log('Dados processados:', {
+        reservas,
+        horariosNobres,
+        config
+      });
+
+      const slots = generateTimeSlots(reservas, horariosNobres, config);
       setTimeSlots(slots);
     } catch (error) {
       console.error('Erro ao buscar horários:', error);

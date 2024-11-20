@@ -128,9 +128,31 @@ const LoginPage = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box mt={5} p={3} boxShadow={3} borderRadius={2}>
-        <Typography variant="h5" align="center" gutterBottom>
+    <Container 
+      maxWidth="sm" 
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <Box 
+        p={3} 
+        boxShadow={3} 
+        borderRadius={2}
+        sx={{
+          width: '100%',
+          backgroundColor: 'white',
+          my: 2 // margem vertical para evitar colagem nas bordas em telas muito pequenas
+        }}
+      >
+        <Typography 
+          variant="h5" 
+          align="center" 
+          gutterBottom
+          sx={{ fontWeight: 500 }}
+        >
           Login ou Criar Conta
         </Typography>
         <Tabs

@@ -6,6 +6,7 @@ const Court = require('../models/Court');
 const Sport = require('../models/Sport'); // Corrigido de Esporte para Sport
 const User = require('../models/User'); // Adicionar importação do User se necessário
 const Joi = require('joi');
+const BusinessConfig = require('../models/BusinessConfig');
 
 // Função auxiliar para verificar disponibilidade
 const verificarDisponibilidade = async (quadra_id, data, horario_inicio, horario_fim) => {
@@ -225,51 +226,67 @@ exports.cancelBooking = async (req, res) => {
 // Função para obter horários reservados para uma quadra em uma data específica
 exports.getReservedTimes = async (req, res) => {
   try {
-    const { quadraId } = req.params;
+    const { quadraId } = req.params; // Mudando de id para quadraId para match com a rota
     const { data } = req.query;
 
-    // Verificar se a quadra existe
-    const quadra = await Court.findById(quadraId);
-    if (!quadra) {
-      return res.status(404).json({
-        success: false,
-        message: 'Quadra não encontrada.'
-      });
+    console.log('Parâmetros recebidos:', { quadraId, data });
+
+    if (!quadraId) {
+      throw new Error('ID da quadra não fornecido');
     }
 
-    const dia = data || new Date().toISOString().split('T')[0];
+    // Formatar a data corretamente para a busca
+    const dataInicio = new Date(data);
+    dataInicio.setHours(0, 0, 0, 0);
     
-    // Calcular horários nobres
-    const horariosNobres = await calcularHorariosNobres(quadraId, new Date(dia));
-    console.log('Horários nobres calculados:', horariosNobres);
+    const dataFim = new Date(data);
+    dataFim.setHours(23, 59, 59, 999);
 
-    // Buscar reservas do dia
-    const reservas = await Booking.find({
-      quadra_id: quadraId,
-      data: dia,
+    // Buscar configurações de negócio
+    const config = await BusinessConfig.findOne();
+    if (!config) {
+      throw new Error('Configurações de negócio não encontradas');
+    }
+
+    // Buscar reservas existentes para a data
+    const reservas = await Booking.find({ 
+      quadra_id: quadraId, // Usando quadraId ao invés de id
+      data: {
+        $gte: dataInicio,
+        $lte: dataFim
+      },
       status: { $ne: 'cancelada' }
     });
 
     console.log('Reservas encontradas:', reservas);
 
-    const horariosAgendados = reservas.map(reserva => ({
+    // Calcular horários nobres
+    const horariosNobres = await calcularHorariosNobres(quadraId, dataInicio);
+    
+    // Formatar os horários reservados
+    const horariosReservados = reservas.map((reserva) => ({
       inicio: reserva.horario_inicio,
-      fim: reserva.horario_fim,
-      status: reserva.status
+      fim: reserva.horario_fim
     }));
 
-    res.status(200).json({
-      success: true,
-      quadra_id: quadraId,
-      data: dia,
-      horarios_agendados: horariosAgendados,
-      horarios_nobres: horariosNobres // Incluindo na resposta
+    console.log('Horários reservados formatados:', horariosReservados);
+    console.log('Horários nobres:', horariosNobres);
+
+    res.status(200).json({ 
+      horariosReservados,
+      horariosNobres,
+      config: {
+        valor_hora_padrao: config.valor_hora_padrao,
+        valor_hora_nobre: config.valor_hora_nobre,
+        horario_abertura: config.horario_abertura,
+        horario_fechamento: config.horario_fechamento
+      }
     });
   } catch (err) {
     console.error('Erro ao buscar horários:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao buscar horários.'
+    res.status(500).json({ 
+      message: 'Erro ao buscar horários reservados.', 
+      error: err.message 
     });
   }
 };
