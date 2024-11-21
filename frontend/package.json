@@ -15,6 +15,7 @@
     "@types/react-calendar": "^3.9.0",
     "axios": "^1.7.7",
     "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "lightbox.js-react": "^1.1.9",
     "notistack": "^3.0.1",
@@ -38,7 +39,6 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "update-users": "node src/scripts/updateUsers.js"
-
   },
   "eslintConfig": {
     "extends": [

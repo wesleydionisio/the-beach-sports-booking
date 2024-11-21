@@ -48,6 +48,52 @@ const BookingSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  is_recorrente: {
+    type: Boolean,
+    default: false
+  },
+  recorrencia_pai_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Booking',
+    default: null
+  },
+  recorrencia: {
+    duracao_meses: {
+      type: Number,
+      required: function() {
+        return this.is_recorrente;
+      }
+    },
+    dia_semana: {
+      type: Number,
+      required: function() {
+        return this.is_recorrente;
+      }
+    },
+    data_inicio: {
+      type: Date,
+      required: function() {
+        return this.is_recorrente;
+      }
+    },
+    data_fim: {
+      type: Date,
+      required: function() {
+        return this.is_recorrente;
+      }
+    },
+    horarios: [{
+      data: Date,
+      horario_inicio: String,
+      horario_fim: String,
+      status: String,
+      valor: Number,
+      booking_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking'
+      }
+    }]
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Booking', BookingSchema);

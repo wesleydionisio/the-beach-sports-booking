@@ -20,6 +20,7 @@ exports.getConfig = async (req, res) => {
 
     res.status(200).json(config);
   } catch (err) {
+    console.error('Erro ao buscar configurações:', err);
     res.status(500).json({ 
       message: 'Erro ao buscar configurações.',
       error: err.message 

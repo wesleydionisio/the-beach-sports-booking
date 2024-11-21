@@ -32,8 +32,8 @@ import 'dayjs/locale/pt-br'; // Importando localização brasileira
 import customParseFormat from 'dayjs/plugin/customParseFormat'; // Pax`ra parsing de formato personalizado
 import utc from 'dayjs/plugin/utc'; // Para manipulação de UTC
 import BookingSummary from '../components/booking/BookingSummary';
-import BookingModals from '../components/booking/BookingModals';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import BookingModals from '../components/booking/BookingModals';
 
 const OptionSkeleton = ({ title }) => (
   <Box>
@@ -93,154 +93,187 @@ const BookingPage = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const theme = useTheme();
   const [bookingStep, setBookingStep] = useState(1);
+  const [bookingData, setBookingData] = useState({
+    is_recorrente: false,
+    recorrencia: null,
+    observacao: '',
+    valor_total: 0
+  });
+  const [bookingResult, setBookingResult] = useState({
+    success: false,
+    message: '',
+    details: '',
+    reservationId: null
+  });
+  const [businessConfig, setBusinessConfig] = useState(null);
+  const [state, setState] = useState({
+    loading: true,
+    error: null,
+    recorrencia: null,
+    slots: []
+  });
+  const [showRecurrenceModal, setShowRecurrenceModal] = useState(false);
 
   const horarioInicio = 8;
   const horarioFim = 22;
   const duracao = 1;
 
-  // Função para gerar slots de horário
+  // Função para gerar slots com valores
+  const generateTimeSlots = (reservas = [], horariosNobres = [], config) => {
+    if (!config) return [];
 
-
-  const generateTimeSlots = (reservas, horariosNobres = [], config = {}) => {
-    console.log('Gerando slots com:', { reservas, horariosNobres, config });
-    
     const slots = [];
-    const valorPadrao = config.valor_hora_padrao || 120;
-    const valorNobre = config.valor_hora_nobre || 150;
-    
-    // Converter horários de funcionamento para números
-    const horarioInicio = parseInt(config.horario_abertura?.split(':')[0]) || 8;
-    const horarioFim = parseInt(config.horario_fechamento?.split(':')[0]) || 23;
-    
-    console.log('Horários de funcionamento:', horarioInicio, 'até', horarioFim);
-    console.log('Reservas existentes:', reservas);
+    const horarioInicio = parseInt(config.horario_abertura.split(':')[0]);
+    const horarioFim = parseInt(config.horario_fechamento.split(':')[0]);
+    const duracao = 1; // 1 hora por slot
 
-    for (let hour = horarioInicio; hour < horarioFim; hour++) {
-      const slotInicio = `${hour.toString().padStart(2, '0')}:00`;
-      const slotFim = `${(hour + 1).toString().padStart(2, '0')}:00`;
-
+    for (let hora = horarioInicio; hora < horarioFim; hora++) {
+      const horarioInicio = `${String(hora).padStart(2, '0')}:00`;
+      const horarioFim = `${String(hora + duracao).padStart(2, '0')}:00`;
+      const isHorarioNobre = horariosNobres.includes(horarioInicio);
+      
       // Verificar se o horário está reservado
-      const isReserved = reservas.some(
-        (reserva) => {
-          const reservaInicio = reserva.inicio;
-          const reservaFim = reserva.fim;
-          return (
-            (reservaInicio <= slotInicio && reservaFim > slotInicio) ||
-            (reservaInicio < slotFim && reservaFim >= slotFim) ||
-            (reservaInicio >= slotInicio && reservaFim <= slotFim)
-          );
-        }
+      const isReservado = reservas.some(reserva => 
+        reserva.horario_inicio === horarioInicio && 
+        reserva.horario_fim === horarioFim
       );
-
-      const isNobre = horariosNobres.includes(slotInicio);
-
+      
       slots.push({
-        horario_inicio: slotInicio,
-        horario_fim: slotFim,
-        available: !isReserved,
-        horario_nobre: isNobre,
-        valor_hora_padrao: valorPadrao,
-        valor_hora_nobre: valorNobre
+        horario_inicio: horarioInicio,
+        horario_fim: horarioFim,
+        disponivel: !isReservado,
+        is_horario_nobre: isHorarioNobre,
+        valor: isHorarioNobre ? config.valor_hora_nobre : config.valor_hora_padrao
       });
     }
-    
+
     return slots;
   };
 
-  // Mover a função fetchTimeSlots para fora do useEffect
-  const fetchTimeSlots = async (date) => {
-    setLoading(true);
-    try {
-      const formattedDate = date.format('YYYY-MM-DD');
-      console.log('Buscando slots para quadra:', quadraId, 'data:', formattedDate);
-
-      const response = await axios.get(`/bookings/${quadraId}/reserved-times`, {
-        params: { data: formattedDate },
-      });
-
-      console.log('Resposta da API:', response.data);
-
-      const reservas = response.data.horariosReservados || [];
-      const horariosNobres = response.data.horariosNobres || [];
-      const config = response.data.config || {};
-      
-      console.log('Dados processados:', {
-        reservas,
-        horariosNobres,
-        config
-      });
-
-      const slots = generateTimeSlots(reservas, horariosNobres, config);
-      setTimeSlots(slots);
-    } catch (error) {
-      console.error('Erro ao buscar horários:', error);
-      setError('Erro ao carregar horários disponíveis');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Atualizar o useEffect para usar a função
+  // Buscar configurações e gerar slots
   useEffect(() => {
-    if (selectedDate) {
-      fetchTimeSlots(selectedDate);
+    const fetchTimeSlots = async () => {
+      try {
+        setLoading(true);
+        const formattedDate = dayjs(selectedDate).format('YYYY-MM-DD');
+        
+        console.log('Buscando slots para:', {
+          quadra_id: quadraId,
+          data: formattedDate
+        });
+
+        const response = await axios.get('/bookings/check', {
+          params: {
+            quadra_id: quadraId,
+            data: formattedDate
+          }
+        });
+
+        if (response.data.success) {
+          console.log('Slots recebidos:', response.data.slots);
+          setTimeSlots(response.data.slots);
+        } else {
+          console.error('Erro ao buscar slots:', response.data.message);
+          setError(response.data.message);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar slots:', error);
+        setError('Erro ao carregar horários disponíveis');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (quadraId && selectedDate) {
+      fetchTimeSlots();
     }
-  }, [selectedDate, quadraId]);
+  }, [quadraId, selectedDate]);
+
+  // Atualizar handleSlotSelect
+  const handleSlotSelect = (slot) => {
+    if (!slot || !slot.disponivel) return;
+    
+    const slotCompleto = {
+      ...slot,
+      quadra_id: quadraId,
+      data: selectedDate.toISOString()
+    };
+    
+    console.log('Slot selecionado:', slotCompleto);
+    setSelectedSlot(slotCompleto);
+  };
 
   // Atualizar handleConfirmReservation para salvar todos os dados necessários
   const handleConfirmReservation = async () => {
-    console.log('🎯 Iniciando processo de reserva...');
-    const token = localStorage.getItem('authToken');
-    
-    if (!token) {
-      console.log('⚠️ Usuário no autenticado, salvando dados...');
-      const bookingData = {
-        quadraId,
-        date: selectedDate.format('YYYY-MM-DD'),
-        slot: selectedSlot,
-        sport: selectedSport,
-        payment: selectedPayment,
-        courtName: court?.nome, // Adicionar nome da quadra
-        courtImage: court?.foto_principal // Adicionar foto da quadra
-      };
-      
-      console.log('📝 Salvando dados da reserva:', bookingData);
-      localStorage.setItem('pendingBooking', JSON.stringify(bookingData));
-      console.log('🔄 Redirecionando para login...');
-      navigate('/login');
-      return;
-    }
     try {
-      const requestBody = {
-        quadra_id: quadraId,
-        data: selectedDate.format('YYYY-MM-DD'),
+      setState(prev => ({ ...prev, loading: true }));
+      
+      const payload = {
+        quadra_id: selectedSlot.quadra_id,
+        data: selectedSlot.data,
         horario_inicio: selectedSlot.horario_inicio,
         horario_fim: selectedSlot.horario_fim,
         esporte_id: selectedSport,
-        metodo_pagamento_id: selectedPayment
+        metodo_pagamento_id: selectedPayment,
+        total: selectedSlot.valor,
+        pague_no_local: selectedPayment === 'dinheiro',
+        is_recorrente: state.recorrencia?.is_recorrente || false
       };
 
-      const response = await axios.post('/bookings', requestBody);
-      
-      // Atualizar os horários disponíveis após criar a reserva
-      await fetchTimeSlots(selectedDate);
-      
-      if (response.data.success) {
-        const reservationId = response.data.reserva._id;
-        navigate(`/reserva/${reservationId}`);
-      } else {
-        alert('Não foi possível confirmar a reserva. Tente novamente.');
+      if (state.recorrencia?.is_recorrente) {
+        console.log('BookingPage - Estado da recorrência:', state.recorrencia);
+        payload.recorrencia = {
+          duracao_meses: state.recorrencia.duracao_meses,
+          dia_semana: state.recorrencia.dia_semana
+        };
       }
+
+      console.log('BookingPage - Payload final:', payload);
+      const response = await axios.post('/bookings', payload);
+      
+      // Verificar a estrutura da resposta e extrair o ID da reserva
+      let reservaId;
+      if (response.data.data) {
+        // Se a resposta tem data.data
+        reservaId = response.data.data._id || 
+                   response.data.data.reserva_pai?._id || 
+                   response.data.data.id;
+      } else if (response.data.booking) {
+        // Se a resposta tem data.booking
+        reservaId = response.data.booking._id || 
+                   response.data.booking.id;
+      } else if (response.data._id) {
+        // Se a resposta tem o ID diretamente
+        reservaId = response.data._id;
+      }
+
+      if (!reservaId) {
+        throw new Error('ID da reserva não encontrado na resposta');
+      }
+
+      // Log da resposta e do ID extraído
+      console.log('Resposta do servidor:', response.data);
+      console.log('ID da reserva extraído:', reservaId);
+
+      // Navegar para a página de revisão da reserva
+      navigate(`/reserva/${reservaId}`);
+
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 
-        'Não foi possível confirmar a reserva. Tente novamente.';
+      console.error('Erro completo:', error);
+      console.error('Resposta do servidor:', error.response?.data);
       
-      // Atualizar os horários disponíveis em caso de erro também
-      await fetchTimeSlots(selectedDate);
-      
-      alert(errorMessage);
+      setState(prev => ({
+        ...prev,
+        error: {
+          message: 'Erro ao criar reserva',
+          details: error.response?.data?.message || error.message
+        }
+      }));
+    } finally {
+      setState(prev => ({ ...prev, loading: false }));
     }
   };
+  
 
   // Buscar detalhes da quadra
   useEffect(() => {
@@ -303,6 +336,67 @@ const BookingPage = () => {
     setSelectedDate(newDate);
     // Aqui você pode adicionar qualquer lógica adicional necessária
     // quando a data mudar
+  };
+
+  // Buscar configurações de negócio
+  useEffect(() => {
+    const fetchBusinessConfig = async () => {
+      try {
+        const response = await axios.get('/business-config');
+        setBusinessConfig(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar configurações:', error);
+      }
+    };
+    fetchBusinessConfig();
+  }, []);
+
+  // Função para calcular o valor da reserva
+  const calcularValorReserva = (horario) => {
+    if (!businessConfig || !horario) return null;
+
+    // Verificar se é horário nobre
+    const isHorarioNobre = horario.is_horario_nobre;
+    
+    // Calcular valor base
+    const valorBase = isHorarioNobre 
+      ? businessConfig.valor_hora_nobre 
+      : businessConfig.valor_hora_padrao;
+
+    return valorBase;
+  };
+
+  useEffect(() => {
+    // Verificar se o servidor está respondendo
+    const checkServerHealth = async () => {
+      try {
+        await axios.get('/health');
+        console.log('Servidor está respondendo');
+      } catch (error) {
+        console.error('Servidor não está respondendo:', error);
+        setError('Não foi possível conectar ao servidor. Por favor, tente novamente mais tarde.');
+      }
+    };
+
+    checkServerHealth();
+  }, []);
+
+  // Adicione um useEffect para monitorar mudanças no estado da recorrência
+  useEffect(() => {
+    if (state.recorrencia) {
+      console.log('BookingPage - Recorrência atualizada:', state.recorrencia);
+    }
+  }, [state.recorrencia]);
+
+  const handleRecorrenciaConfirm = (recorrencia) => {
+    console.log('BookingPage - Recebendo recorrência:', recorrencia);
+    setState(prev => ({
+      ...prev,
+      recorrencia: {
+        ...recorrencia,
+        duracao_meses: Number(recorrencia.duracao_meses)
+      }
+    }));
   };
 
   return (
@@ -557,9 +651,9 @@ const BookingPage = () => {
                     >
                       {selectedDate ? (
                         <TimeSlots 
-                          slots={timeSlots} 
-                          onSlotSelect={setSelectedSlot}
+                          slots={timeSlots}
                           selectedSlot={selectedSlot}
+                          onSlotSelect={handleSlotSelect}
                         />
                       ) : (
                         <OptionSkeleton title="Horário:" />
@@ -585,7 +679,7 @@ const BookingPage = () => {
                         {selectedDate && selectedSlot ? (
                           <>
                             <Typography variant="body1">
-                              {selectedSlot.horario_inicio}h • {dayjs(selectedDate).format('DD/MM/YYYY')}
+                              {selectedSlot.horario_inicio}h �� {dayjs(selectedDate).format('DD/MM/YYYY')}
                             </Typography>
                             <Box sx={{ 
                               display: 'flex', 
@@ -642,14 +736,6 @@ const BookingPage = () => {
                     onEdit={() => setBookingStep(1)}
                   />
                   
-                  {/* Opções Adicionais */}
-                  <Box sx={{ mb: 0 }}>
-                    <Typography variant="h6" sx={{ mb: 1, mt: 1, fontWeight: 550 }}>
-                      Opções adicionais:
-                    </Typography>
-                    <BookingModals />
-                  </Box>
-
                   {/* Seleção de Esporte e Pagamento */}
                   <Grid 
                     container 
@@ -687,6 +773,17 @@ const BookingPage = () => {
                       </Box>
                     </Grid>
                   </Grid>
+
+                  {/* Opções Adicionais */}
+                  <Box sx={{ mb: 0 }}>
+                    <Typography variant="h6" sx={{ mb: 1, mt: 1, fontWeight: 550 }}>
+                      Opções adicionais:
+                    </Typography>
+                    <BookingModals
+                      selectedSlot={selectedSlot}
+                      onRecurrenceConfirm={handleRecorrenciaConfirm}
+                    />
+                  </Box>
 
                   {/* Botão de Confirmar Reserva */}
                   <Box>

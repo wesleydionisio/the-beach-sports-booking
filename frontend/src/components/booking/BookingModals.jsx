@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   Button, 
@@ -6,112 +6,150 @@ import {
   DialogTitle, 
   DialogContent, 
   DialogActions, 
-  Radio, 
-  RadioGroup, 
-  FormControlLabel, 
+  Typography,
   TextField,
-  Typography 
+  CircularProgress
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import axios from '../../api/apiService';
 
-const buttonStyles = {
-  justifyContent: 'flex-start',
-  minWidth: 'auto',
-  flex: '1 1 calc(50% - 8px)',
-  height: '40px',
-  '& .MuiSvgIcon-root': {
-    color: 'inherit',
-    width: 20,
-    height: 20
-  },
-  '& .MuiButton-startIcon': {
-    marginRight: 1
-  },
-  '& .MuiButton-label': {
-    lineHeight: 1,
-    whiteSpace: 'nowrap'
-  }
-};
-
+// Definição dos estilos
 const modalStyles = {
   '& .MuiDialog-paper': {
-    width: { xs: '100%', sm: '600px' }, // Full width no mobile, 600px em telas maiores
-    margin: { xs: '16px', sm: '32px' },
-    borderRadius: { xs: '12px', sm: '12px' },
-  },
-  '& .MuiDialogTitle-root': {
-    fontWeight: 550
+    width: '100%',
+    maxWidth: 600,
+    m: 2,
+    borderRadius: 2
   }
 };
 
-const RecurrenceModal = ({ open, onClose }) => {
-  const [selectedOption, setSelectedOption] = React.useState(null);
+const buttonStyles = {
+  borderRadius: 2,
+  textTransform: 'none',
+  px: 3,
+  py: 1.5,
+  fontSize: '1rem',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 1,
+  '& .MuiButton-startIcon': {
+    margin: 0
+  }
+};
+
+// Função auxiliar para obter o nome do dia da semana
+const getDayName = (dayNumber) => {
+  const days = [
+    'Domingo',
+    'Segunda-feira',
+    'Terça-feira',
+    'Quarta-feira',
+    'Quinta-feira',
+    'Sexta-feira',
+    'Sábado'
+  ];
+  return days[dayNumber];
+};
+
+const BookingModals = ({ selectedSlot, onRecurrenceConfirm }) => {
+  const [recurrenceOpen, setRecurrenceOpen] = useState(false);
+  const [observationOpen, setObservationOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleRecurrenceConfirm = async () => {
+    if (!selectedOption) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log('BookingModals - Valor selecionado:', selectedOption);
+      
+      const recorrencia = {
+        is_recorrente: true,
+        duracao_meses: Number(selectedOption),
+        dia_semana: new Date(selectedSlot.data).getDay()
+      };
+
+      console.log('BookingModals - Enviando recorrência:', recorrencia);
+      onRecurrenceConfirm(recorrencia);
+      setRecurrenceOpen(false);
+
+    } catch (error) {
+      console.error('Erro ao confirmar recorrência:', error);
+      setError('Erro ao confirmar recorrência');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose}
-      fullScreen={false}
-      sx={modalStyles}
-    >
-      <DialogTitle>Horário Fixo?</DialogTitle>
-      <DialogContent>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'row', // Força layout horizontal
-          justifyContent: 'space-between', // Distribui os botões uniformemente
-          flexWrap: 'nowrap', // Evita quebra de linha
-          gap: 1.5,
-          py: 2 
-        }}>
-          {[
-            { value: '1', label: '1', subtitle: 'mês' },
-            { value: '3', label: '3', subtitle: 'meses' },
-            { value: '6', label: '6', subtitle: 'meses' },
-            { value: '12', label: '12', subtitle: 'meses' },
-            { value: '0', label: '', subtitle: 'fixo' }
-          ].map((option) => (
-            <Button
-              key={option.value}
-              variant={selectedOption === option.value ? "contained" : "outlined"}
-              onClick={() => setSelectedOption(option.value)}
-              sx={{
-                borderRadius: '50%',
-                minWidth: '64px',
-                width: '64px',
-                height: '64px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                padding: '8px',
-                '& .MuiTypography-root': {
-                  lineHeight: 1.2
-                }
-              }}
-            >
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                {option.label}
-              </Typography>
-              <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                {option.subtitle}
-              </Typography>
-            </Button>
-          ))}
-        </Box>
-      </DialogContent>
-      <DialogActions sx={{ p: 2, pt: 0 }}>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button 
-          onClick={onClose} 
-          variant="contained" 
-          disabled={!selectedOption}
+    <Box sx={{ mb: 1 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 2
+      }}>
+        <Button
+          startIcon={<AccessTimeIcon />}
+          variant="outlined"
+          onClick={() => setRecurrenceOpen(true)}
+          sx={buttonStyles}
         >
-          Confirmar
+          Horário Fixo?
         </Button>
-      </DialogActions>
-    </Dialog>
+        <Button
+          startIcon={<NoteAddIcon />}
+          variant="outlined"
+          onClick={() => setObservationOpen(true)}
+          sx={buttonStyles}
+        >
+          Adicionar Observação
+        </Button>
+
+        <Dialog open={recurrenceOpen} onClose={() => setRecurrenceOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Agendar Horário Fixo</DialogTitle>
+          <DialogContent>
+            <Typography variant="body1" gutterBottom>
+              Por quanto tempo você deseja manter este horário?
+            </Typography>
+            {[1, 2, 3, 4, 5, 6].map((months) => (
+              <Button
+                key={months}
+                variant={selectedOption === months ? "contained" : "outlined"}
+                onClick={() => {
+                  console.log('Selecionando opção:', months);
+                  setSelectedOption(months);
+                }}
+                sx={{ m: 1 }}
+              >
+                {months} {months === 1 ? 'mês' : 'meses'}
+              </Button>
+            ))}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setRecurrenceOpen(false)}>Cancelar</Button>
+            <Button 
+              onClick={handleRecurrenceConfirm}
+              variant="contained" 
+              disabled={!selectedOption}
+            >
+              Confirmar
+            </Button>
+          </DialogActions>
+        </Dialog>
+        <ObservationModal
+          open={observationOpen}
+          onClose={() => setObservationOpen(false)}
+        />
+      </Box>
+    </Box>
   );
 };
 
@@ -140,55 +178,5 @@ const ObservationModal = ({ open, onClose }) => (
     </DialogActions>
   </Dialog>
 );
-
-const BookingModals = () => {
-  const [recurrenceOpen, setRecurrenceOpen] = React.useState(false);
-  const [observationOpen, setObservationOpen] = React.useState(false);
-
-  return (
-    <Box sx={{ mb: 1 }}>
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 2
-      }}>
-        <Button
-          startIcon={<AccessTimeIcon />}
-          variant="outlined"
-          onClick={() => setRecurrenceOpen(true)}
-          sx={buttonStyles}
-        >
-          Horário Fixo?
-        </Button>
-        <Button
-          startIcon={<NoteAddIcon />}
-          variant="outlined"
-          onClick={() => setObservationOpen(true)}
-          sx={{
-            ...buttonStyles,
-            '& .MuiButton-root': {
-              lineHeight: 1,
-            },
-            typography: {
-              lineHeight: 1
-            }
-          }}
-        >
-          Adicionar Observação
-        </Button>
-
-        <RecurrenceModal 
-          open={recurrenceOpen}
-          onClose={() => setRecurrenceOpen(false)}
-        />
-        <ObservationModal
-          open={observationOpen}
-          onClose={() => setObservationOpen(false)}
-        />
-      </Box>
-    </Box>
-  );
-};
 
 export default BookingModals; 

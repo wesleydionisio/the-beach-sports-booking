@@ -1,6 +1,7 @@
 const Sport = require('../models/Sport');
 const Court = require('../models/Court');
 const Booking = require('../models/Booking');
+const BusinessConfig = require('../models/BusinessConfig');
 
 
 exports.getCourts = async (req, res) => {
@@ -137,6 +138,39 @@ exports.getReservedTimes = async (req, res) => {
     res.status(500).json({ 
       message: 'Erro ao buscar horários reservados.', 
       error: err.message 
+    });
+  }
+};
+
+exports.getHorariosNobres = async (req, res) => {
+  try {
+    const { quadraId } = req.params;
+    const dataAtual = new Date();
+    
+    // Buscar configurações de negócio para verificar horários nobres
+    const businessConfig = await BusinessConfig.findOne();
+    if (!businessConfig) {
+      return res.status(404).json({ message: 'Configurações de negócio não encontradas' });
+    }
+
+    // Definir horários nobres (exemplo: 18:00 às 22:00 em dias úteis)
+    const horariosNobres = [
+      '18:00',
+      '19:00',
+      '20:00',
+      '21:00'
+    ];
+
+    res.status(200).json({
+      quadra_id: quadraId,
+      horarios: horariosNobres,
+      data_referencia: dataAtual
+    });
+  } catch (error) {
+    console.error('Erro ao buscar horários nobres:', error);
+    res.status(500).json({ 
+      message: 'Erro ao buscar horários nobres',
+      error: error.message 
     });
   }
 };

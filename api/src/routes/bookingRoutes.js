@@ -5,18 +5,13 @@ const router = express.Router();
 const bookingController = require('../controllers/bookingController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
-// Rota protegida para obter reservas do usuário
-router.get('/user', authMiddleware, bookingController.getUserBookings);
+// Rotas protegidas
+router.use(authMiddleware);
+router.post('/', bookingController.createBooking);
+router.get('/check', bookingController.checkTimeSlots);
+router.post('/check-recorrencia', bookingController.checkRecorrencia);
 
-// Outras rotas
-router.post('/', authMiddleware, bookingController.createBooking);
-router.put('/:id/cancel', authMiddleware, bookingController.cancelBooking);
-router.get('/:quadraId/reserved-times', bookingController.getReservedTimes);
-
-// Adicionar esta rota para obter detalhes de uma reserva específica
-router.get('/:id', authMiddleware, bookingController.getBookingById);
-
-// Rota para cancelar uma reserva
-router.put('/:id/cancel', authMiddleware, bookingController.cancelBooking);
+// Adicionar esta nova rota
+router.get('/:id', bookingController.getBookingById);
 
 module.exports = router;

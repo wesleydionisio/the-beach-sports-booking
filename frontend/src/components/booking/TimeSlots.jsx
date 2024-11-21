@@ -100,7 +100,7 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot }) => {
                 {slot.horario_inicio} - {slot.horario_fim}
               </Typography>
 
-              {/* Label Em alta! - só aparece se for horário nobre e disponível */}
+              {/* Label Em alta! */}
               {isNobre && slot.available && (
                 <Box sx={{ 
                   display: 'flex', 
@@ -134,7 +134,13 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot }) => {
 
               {/* Preço */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
-                <Typography variant="body1" sx={{ fontWeight: 'bold', color: isSelected ? '#fff' : slot.available ? '#000' : 'rgba(0, 0, 0, 0.15)' }}>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    color: isSelected ? '#fff' : slot.available ? '#000' : 'rgba(0, 0, 0, 0.15)' 
+                  }}
+                >
                   {valor ? `R$ ${valor.toFixed(2)}` : 'Preço indisponível'}
                 </Typography>
                 <Typography variant="caption">/h</Typography>

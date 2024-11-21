@@ -1,296 +1,239 @@
-// src/pages/ReservationReview.jsx
-
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import axios from '../api/apiService';
 import {
-  Container,
-  Typography,
   Box,
-  Button,
-  Grid,
+  Typography,
   Paper,
   CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Chip,
+  Alert,
+  Grid,
+  Button
 } from '@mui/material';
-import axios from '../api/apiService';
-import { useSnackbar } from 'notistack'; // Importar useSnackbar
-import dayjs from 'dayjs';
-import 'dayjs/locale/pt-br';
-
-dayjs.locale('pt-br');
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const ReservationReview = () => {
-  const { reservationId } = useParams(); // Extrai o ID da reserva da URL
+  const { reservationId } = useParams(); // Mudado de id para reservationId para match com a rota
   const navigate = useNavigate();
-  const { enqueueSnackbar } = useSnackbar(); // Usar useSnackbar
   const [reservation, setReservation] = useState(null);
-  const [bookingDate, setBookingDate] = useState(null); // Estado para armazenar bookingDate
   const [loading, setLoading] = useState(true);
-  const [timeRemaining, setTimeRemaining] = useState('');
-  const [error, setError] = useState('');
-  const [openCancelModal, setOpenCancelModal] = useState(false); // Estado para controlar o modal
+  const [error, setError] = useState(null);
 
   const fetchReservationDetails = async () => {
     try {
-      console.log('Buscando reserva com ID:', reservationId);
+      console.log('Buscando reserva:', reservationId);
       const response = await axios.get(`/bookings/${reservationId}`);
-      console.log('Resposta completa da API:', response.data);
+      console.log('Resposta:', response.data);
       
-      if (response.data.success) {
-        console.log('Dados da reserva:', response.data.reservation);
-        console.log('Método de pagamento:', response.data.reservation.pagamento);
-        setReservation(response.data.reservation);
+      if (response.data && response.data.success) {
+        setReservation(response.data.reservation || response.data.booking);
       } else {
-        setError('Reserva não encontrada.');
+        throw new Error('Dados da reserva não encontrados na resposta');
       }
-    } catch (err) {
-      console.error('Erro ao buscar detalhes da reserva:', err);
-      console.log('Detalhes do erro:', err.response?.data);
-      setError('Não foi possível carregar os detalhes da reserva.');
+    } catch (error) {
+      console.error('Erro completo:', error);
+      console.log('Detalhes do erro:', error.response?.data);
+      
+      const errorMessage = error.response?.status === 404
+        ? 'Reserva não encontrada'
+        : error.response?.data?.message || 'Erro ao carregar os detalhes da reserva';
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!reservationId) {
-      navigate('/');
-      return;
+    if (reservationId) {
+      fetchReservationDetails();
     }
-
-    fetchReservationDetails();
-  }, [reservationId, navigate]);
-
-  // Log quando o estado reservation é atualizado
-  useEffect(() => {
-    console.log('Estado reservation atualizado:', reservation);
-    if (reservation) {
-      console.log('Método de pagamento no estado:', reservation.pagamento);
-    }
-  }, [reservation]);
-
-  // Função para mapear o status da reserva para um Chip apropriado
-  const getStatusChip = (status) => {
-    switch (status) {
-      case 'pendente':
-        return <Chip label="Pendente" color="warning" />;
-      case 'confirmada':
-        return <Chip label="Confirmada" color="success" />;
-      case 'cancelada':
-        return <Chip label="Cancelada" color="error" />;
-      default:
-        return <Chip label={status} color="default" />;
-    }
-  };
-
-  // Dentro do useEffect que processa a reserva
-  useEffect(() => {
-    if (!reservation) return;
-
-    const [year, month, day] = reservation.data.split('-').map(Number);
-    const [hour, minute] = reservation.horario_inicio.split(':').map(Number);
-    
-    // Criar um objeto Date local
-    const bookingDateLocal = new Date(year, month - 1, day, hour, minute);
-    
-    // Atualizar o estado
-    setBookingDate(bookingDateLocal);
-
-    const updateCountdown = () => {
-      const now = new Date();
-      const difference = bookingDateLocal - now;
-
-      if (difference <= 0) {
-        setTimeRemaining('A reserva já começou.');
-        clearInterval(interval);
-        return;
-      }
-
-      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((difference / (1000 * 60)) % 60);
-      const seconds = Math.floor((difference / 1000) % 60);
-
-      setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
-    };
-
-    const interval = setInterval(updateCountdown, 1000);
-    updateCountdown();
-
-    return () => clearInterval(interval);
-  }, [reservation]);
-
-  // Função para abrir o modal de cancelamento
-  const handleOpenCancelModal = () => {
-    setOpenCancelModal(true);
-  };
-
-  // Função para fechar o modal de cancelamento
-  const handleCloseCancelModal = () => {
-    setOpenCancelModal(false);
-  };
-
-  // Função para cancelar a reserva
-  const handleCancelReservation = async () => {
-    try {
-      // O token já está sendo adicionado automaticamente pelo interceptador do axios
-      const response = await axios.put(`/bookings/${reservationId}/cancel`);
-
-      if (response.data.success) {
-        // Atualizar o estado da reserva para refletir o cancelamento
-        setReservation(prev => ({
-          ...prev,
-          status: 'cancelada',
-        }));
-        // Fechar o modal
-        handleCloseCancelModal();
-        // Exibir notificação de sucesso
-        enqueueSnackbar('Reserva cancelada com sucesso.', { variant: 'success' });
-      } else {
-        // Exibir notificação de erro
-        enqueueSnackbar('Não foi possível cancelar a reserva. Tente novamente.', { variant: 'error' });
-      }
-    } catch (error) {
-      console.error('Erro ao cancelar a reserva:', error);
-      const errorMessage =
-        error.response?.data?.message || 'Não foi possível cancelar a reserva. Tente novamente.';
-      // Exibir notificação de erro
-      enqueueSnackbar(errorMessage, { variant: 'error' });
-    }
-  };
+  }, [reservationId]);
 
   if (loading) {
     return (
-      <Container maxWidth="md" sx={{ mt: 5, textAlign: 'center' }}>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
         <CircularProgress />
-      </Container>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="md" sx={{ mt: 5 }}>
-        <Typography variant="h6" color="error" align="center">
+      <Box p={3}>
+        <Alert 
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={() => navigate('/')}>
+              Voltar para Home
+            </Button>
+          }
+        >
           {error}
-        </Typography>
-        <Box mt={3} display="flex" justifyContent="center">
-          <Button variant="contained" color="primary" onClick={() => navigate('/')}>
-            Voltar para a Página Inicial
-          </Button>
-        </Box>
-      </Container>
+        </Alert>
+      </Box>
     );
   }
 
-  // Verificar se bookingDate está definido
-  const formattedDate = bookingDate
-    ? dayjs(bookingDate).format('DD [de] MMMM [de] YYYY')
-    : 'Data inválida';
+  if (!reservation) {
+    return (
+      <Box p={3}>
+        <Alert 
+          severity="info"
+          action={
+            <Button color="inherit" size="small" onClick={() => navigate('/')}>
+              Voltar para Home
+            </Button>
+          }
+        >
+          Nenhuma informação da reserva encontrada
+        </Alert>
+      </Box>
+    );
+  }
+
+  const formatDate = (dateString) => {
+    try {
+      return format(new Date(dateString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const getStatusColor = (status) => {
+    const statusColors = {
+      'pendente': 'warning.main',
+      'confirmada': 'success.main',
+      'cancelada': 'error.main',
+      'concluida': 'info.main'
+    };
+    return statusColors[status?.toLowerCase()] || 'text.primary';
+  };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 5 }}>
+    <Box p={3} maxWidth="800px" mx="auto">
       <Paper elevation={3} sx={{ p: 4 }}>
-        {/* Foto da Quadra */}
-        <Box textAlign="center" mb={4}>
-          <img
-            src={reservation.foto_principal || 'https://via.placeholder.com/150'}
-            alt={reservation.nome}
-            width="100%"
-            style={{ borderRadius: '8px' }}
-          />
-        </Box>
-
-        {/* Detalhes da Reserva */}
-        <Typography variant="h5" gutterBottom>
+        <Typography variant="h5" gutterBottom fontWeight="bold" color="primary">
           Detalhes da Reserva
         </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography><strong>Nome da Quadra:</strong> {reservation.nome}</Typography>
-            <Typography><strong>Esporte:</strong> {reservation.esporte}</Typography>
-            <Typography><strong>Horário:</strong> {reservation.horario_inicio} - {reservation.horario_fim}</Typography>
+        
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Box mb={2} p={2} bgcolor="background.default" borderRadius={1}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Status da Reserva
+              </Typography>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: getStatusColor(reservation.status),
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold'
+                }}
+              >
+                {reservation.status}
+              </Typography>
+            </Box>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography><strong>Solicitado por:</strong> {reservation.cliente}</Typography>
-            <Typography><strong>Data:</strong> {formattedDate}</Typography>
-            <Typography><strong>Inicia em:</strong> {timeRemaining}</Typography>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Quadra
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {reservation.nome}
+            </Typography>
           </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Data
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {formatDate(reservation.data)}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Horário
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {reservation.horario_inicio} às {reservation.horario_fim}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Esporte
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {reservation.esporte}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Forma de Pagamento
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {reservation.pagamento}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Valor
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {formatCurrency(reservation.total)}
+            </Typography>
+          </Grid>
+
+          {reservation.is_recorrente && (
+            <Grid item xs={12}>
+              <Box mt={2} p={2} bgcolor="primary.light" borderRadius={1}>
+                <Typography variant="subtitle2" color="white">
+                  Reserva Recorrente
+                </Typography>
+                <Typography variant="body2" color="white">
+                  Esta é uma reserva recorrente com duração de {reservation.recorrencia?.duracao_meses} meses
+                </Typography>
+              </Box>
+            </Grid>
+          )}
         </Grid>
 
-        {/* Label de Status da Reserva */}
-        <Box mt={3}>
-          {getStatusChip(reservation.status)}
-        </Box>
-
-        {/* Pagamento */}
-        <Box mt={4}>
-          <Typography variant="h6">Pagamento</Typography>
-          <Typography>
-            <strong>Forma de Pagamento:</strong> 
-            {reservation?.pagamento || 'Não especificado'}
-            {/* Debug inline */}
-            {console.log('Renderizando método de pagamento:', reservation?.pagamento)}
-          </Typography>
-          <Typography>
-            <strong>Total:</strong> R$ {reservation?.total.toFixed(2)}
-          </Typography>
-          <Typography><strong>Pague no Local:</strong> {reservation.pague_no_local ? 'Sim' : 'Não'}</Typography>
-        </Box>
-
-        {/* Botões de Compartilhar e Cancelar */}
-        <Box mt={4} display="flex" justifyContent="center" gap={2}>
-          <Button variant="outlined" color="primary">
-            Compartilhar
-          </Button>
-          {/* Exibir botão de cancelar apenas se a reserva não estiver cancelada */}
-          {reservation.status !== 'cancelada' && (
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={handleOpenCancelModal}
-            >
-              Cancelar
-            </Button>
-          )}
+        <Box display="flex" justifyContent="flex-end" mt={4}>
           <Button
             variant="outlined"
             color="primary"
-            onClick={() => navigate('/perfil')}
+            onClick={() => navigate('/')}
+            sx={{ mr: 2 }}
           >
-            Ver reservas
+            Voltar para Home
           </Button>
+          {reservation.status === 'pendente' && (
+            <Button
+              variant="contained"
+              color="primary"
+              // Adicione aqui a função para confirmar pagamento
+              onClick={() => {/* handleConfirmPayment() */}}
+            >
+              Confirmar Pagamento
+            </Button>
+          )}
         </Box>
       </Paper>
-
-      {/* Modal de Confirmação de Cancelamento */}
-      <Dialog
-        open={openCancelModal}
-        onClose={handleCloseCancelModal}
-        aria-labelledby="cancel-reservation-dialog-title"
-        aria-describedby="cancel-reservation-dialog-description"
-      >
-        <DialogTitle id="cancel-reservation-dialog-title">
-          Confirmar Cancelamento
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="cancel-reservation-dialog-description">
-            Você tem certeza que deseja cancelar esta reserva? Essa ação não pode ser desfeita.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseCancelModal} color="primary">
-            Não
-          </Button>
-          <Button onClick={handleCancelReservation} color="secondary" autoFocus>
-            Sim, Cancelar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+    </Box>
   );
 };
 

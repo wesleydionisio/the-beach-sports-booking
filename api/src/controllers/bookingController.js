@@ -7,38 +7,71 @@ const Sport = require('../models/Sport'); // Corrigido de Esporte para Sport
 const User = require('../models/User'); // Adicionar importação do User se necessário
 const Joi = require('joi');
 const BusinessConfig = require('../models/BusinessConfig');
+const BookingService = require('../services/BookingService');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const customParseFormat = require('dayjs/plugin/customParseFormat');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
+
+// Função auxiliar para gerar datas recorrentes
+const gerarDatasRecorrentes = (dataInicial, duracaoMeses, diaSemana) => {
+  console.log('Gerando datas recorrentes:', {
+    dataInicial,
+    duracaoMeses,
+    diaSemana
+  });
+
+  const datas = [];
+  const dataInicio = new Date(dataInicial);
+  const dataFim = new Date(dataInicial);
+  dataFim.setMonth(dataFim.getMonth() + parseInt(duracaoMeses));
+
+  // Ajustar para o primeiro dia do mês seguinte
+  dataFim.setDate(1);
+  dataFim.setMonth(dataFim.getMonth() + 1);
+  dataFim.setDate(dataFim.getDate() - 1);
+
+  let dataAtual = new Date(dataInicio);
+  
+  while (dataAtual <= dataFim) {
+    if (dataAtual.getDay() === parseInt(diaSemana)) {
+      datas.push(new Date(dataAtual));
+    }
+    // Avançar um dia
+    dataAtual.setDate(dataAtual.getDate() + 1);
+  }
+
+  console.log(`Geradas ${datas.length} datas para recorrência:`, 
+    datas.map(d => ({
+      data: d.toISOString(),
+      dia_semana: d.getDay()
+    }))
+  );
+
+  return datas;
+};
 
 // Função auxiliar para verificar disponibilidade
 const verificarDisponibilidade = async (quadra_id, data, horario_inicio, horario_fim) => {
-  // Buscar reservas existentes para a quadra na mesma data
-  const reservasExistentes = await Booking.find({
+  const reservaExistente = await Booking.findOne({
     quadra_id,
-    data,
-    status: { $ne: 'cancelada' }, // Ignora reservas canceladas
-    $or: [
-      // Verifica se há sobreposição de horários
-      {
-        $and: [
-          { horario_inicio: { $lte: horario_inicio } },
-          { horario_fim: { $gt: horario_inicio } }
-        ]
-      },
-      {
-        $and: [
-          { horario_inicio: { $lt: horario_fim } },
-          { horario_fim: { $gte: horario_fim } }
-        ]
-      },
-      {
-        $and: [
-          { horario_inicio: { $gte: horario_inicio } },
-          { horario_fim: { $lte: horario_fim } }
-        ]
-      }
-    ]
-  });
+    data: {
+      $gte: new Date(data).setHours(0,0,0,0),
+      $lt: new Date(data).setHours(23,59,59,999)
+    },
+    horario_inicio,
+    horario_fim,
+    status: { $ne: 'cancelada' }
+  }).populate('usuario_id', 'nome');
 
-  return reservasExistentes.length === 0;
+  return {
+    disponivel: !reservaExistente,
+    reservaExistente
+  };
 };
 
 // Função auxiliar para calcular horários nobres
@@ -83,39 +116,143 @@ const calcularHorariosNobres = async (quadraId, dataReferencia) => {
 // Função para criar uma reserva
 exports.createBooking = async (req, res) => {
   try {
-    const { 
-      quadra_id, 
-      data, 
-      horario_inicio, 
-      horario_fim, 
-      esporte_id,
-      metodo_pagamento_id  // Alterado de 'pagamento' para 'metodo_pagamento_id'
-    } = req.body;
-
-    // Verificar disponibilidade antes de criar a reserva
-    const disponivel = await verificarDisponibilidade(
+    console.log('Controller - Dados recebidos:', req.body);
+    
+    const {
       quadra_id,
       data,
       horario_inicio,
-      horario_fim
-    );
+      horario_fim,
+      esporte_id,
+      metodo_pagamento_id,
+      total,
+      pague_no_local,
+      is_recorrente,
+      recorrencia
+    } = req.body;
 
-    if (!disponivel) {
-      return res.status(400).json({
-        success: false,
-        message: 'Horário não está mais disponível'
+    if (is_recorrente && recorrencia) {
+      console.log('Controller - Dados da recorrência:', {
+        duracao_meses: recorrencia.duracao_meses,
+        tipo: typeof recorrencia.duracao_meses
+      });
+      
+      const duracaoMeses = Number(recorrencia.duracao_meses);
+      console.log('Controller - Duração em meses convertida:', duracaoMeses);
+
+      const dataInicio = new Date(data);
+      const dataFim = new Date(data);
+      dataFim.setMonth(dataFim.getMonth() + duracaoMeses);
+
+      const datas = gerarDatasRecorrentes(
+        dataInicio,
+        duracaoMeses,
+        recorrencia.dia_semana
+      );
+
+      console.log('Controller - Datas geradas:', {
+        quantidade: datas.length,
+        duracaoMeses,
+        primeira: datas[0],
+        ultima: datas[datas.length - 1]
+      });
+
+      // Criar a reserva principal (pai)
+      const reservaPai = new Booking({
+        usuario_id: req.user._id,
+        quadra_id,
+        data: dataInicio,
+        horario_inicio,
+        horario_fim,
+        esporte: esporte_id,
+        metodo_pagamento: metodo_pagamento_id,
+        total,
+        pague_no_local,
+        is_recorrente: true,
+        recorrencia: {
+          duracao_meses: duracaoMeses,
+          dia_semana: recorrencia.dia_semana,
+          data_inicio: dataInicio,
+          data_fim: dataFim,
+          horarios: datas.map(data => ({
+            data,
+            horario_inicio,
+            horario_fim,
+            valor: total
+          }))
+        }
+      });
+
+      const reservaPaiSalva = await reservaPai.save();
+      console.log('Reserva pai salva:', reservaPaiSalva);
+
+      // Criar as reservas filhas
+      const reservasFilhas = await Promise.all(datas.slice(1).map(async (dataRecorrencia) => {
+        const reservaFilha = new Booking({
+          usuario_id: req.user._id,
+          quadra_id,
+          data: dataRecorrencia,
+          horario_inicio,
+          horario_fim,
+          esporte: esporte_id,
+          metodo_pagamento: metodo_pagamento_id,
+          status: 'pendente',
+          total: req.body.total,
+          pague_no_local: req.body.pague_no_local || false,
+          is_recorrente: true,
+          recorrencia_pai_id: reservaPaiSalva._id,
+          recorrencia: {
+            duracao_meses: recorrencia.duracao_meses,
+            dia_semana: recorrencia.dia_semana,
+            data_inicio: dataInicio,
+            data_fim: dataFim
+          }
+        });
+
+        return reservaFilha.save();
+      }));
+
+      return res.status(201).json({
+        success: true,
+        message: 'Reservas recorrentes criadas com sucesso',
+        data: {
+          reserva_pai: reservaPaiSalva,
+          reservas_filhas: reservasFilhas,
+          total_reservas: reservasFilhas.length + 1
+        }
       });
     }
 
-    // Validar se todos os campos necessários foram fornecidos
-    if (!quadra_id || !data || !horario_inicio || !horario_fim || !esporte_id || !metodo_pagamento_id) {
-      return res.status(400).json({
+    // Verificar se já existe uma reserva para este horário
+    const dataInicio = new Date(data);
+    dataInicio.setHours(0, 0, 0, 0);
+    
+    const dataFim = new Date(data);
+    dataFim.setHours(23, 59, 59, 999);
+
+    const reservaExistente = await Booking.findOne({
+      quadra_id,
+      data: {
+        $gte: dataInicio,
+        $lte: dataFim
+      },
+      horario_inicio,
+      horario_fim,
+      status: { $ne: 'cancelada' } // Não considerar reservas canceladas
+    });
+
+    if (reservaExistente) {
+      return res.status(409).json({
         success: false,
-        message: 'Todos os campos são obrigatórios'
+        message: 'Este horário já está reservado para esta data.',
+        conflito: {
+          data: reservaExistente.data,
+          horario: `${reservaExistente.horario_inicio} - ${reservaExistente.horario_fim}`
+        }
       });
     }
 
-    // Buscar a quadra para calcular o preço
+    // Validar se a quadra existe
     const quadra = await Court.findById(quadra_id);
     if (!quadra) {
       return res.status(404).json({
@@ -124,37 +261,65 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // Calcular o total
-    const [inicioHora, inicioMinuto] = horario_inicio.split(':').map(Number);
-    const [fimHora, fimMinuto] = horario_fim.split(':').map(Number);
-    const duracaoHoras = fimHora - inicioHora + (fimMinuto - inicioMinuto) / 60;
-    const total = duracaoHoras * quadra.preco_por_hora;
+    // Buscar configurações de negócio para valores
+    const businessConfig = await BusinessConfig.findOne();
+    if (!businessConfig) {
+      return res.status(500).json({
+        success: false,
+        message: 'Configurações de negócio não encontradas'
+      });
+    }
 
-    // Criar a reserva
-    const novaReserva = await Booking.create({
-      usuario_id: req.user.id,
+    // Verificar disponibilidade
+    const horario = parseInt(horario_inicio.split(':')[0]);
+    const isHorarioNobre = horario >= 18 && horario < 22;
+    const valor = isHorarioNobre ? businessConfig.valor_hora_nobre : businessConfig.valor_hora_padrao;
+
+    // Criar a reserva base
+    const novaReserva = new Booking({
+      usuario_id: req.user._id,
       quadra_id,
-      data,
+      data: new Date(data),
       horario_inicio,
       horario_fim,
       esporte: esporte_id,
       metodo_pagamento: metodo_pagamento_id,
-      total,
+      total: valor,
+      is_recorrente: !!is_recorrente,
       status: 'pendente'
     });
 
-    res.status(201).json({
+    // Se for recorrente, adicionar dados de recorrência
+    if (is_recorrente && recorrencia) {
+      novaReserva.recorrencia = {
+        duracao_meses: recorrencia.duracao_meses,
+        dia_semana: new Date(data).getDay(),
+        data_inicio: new Date(data),
+        data_fim: new Date(recorrencia.data_fim),
+        horarios: recorrencia.horarios
+      };
+    }
+
+    console.log('Nova reserva a ser criada:', novaReserva);
+
+    await novaReserva.save();
+
+    return res.status(201).json({
       success: true,
       message: 'Reserva criada com sucesso',
-      reserva: novaReserva
+      data: {
+        _id: novaReserva._id,
+        // ... outros dados da reserva ...
+      }
     });
 
   } catch (error) {
     console.error('Erro ao criar reserva:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Erro ao criar reserva',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
@@ -294,8 +459,10 @@ exports.getReservedTimes = async (req, res) => {
 // Função para obter detalhes de uma reserva específica
 exports.getBookingById = async (req, res) => {
   const { id } = req.params;
-
+  console.log('Buscando reserva com ID:', id);
+  
   if (!mongoose.Types.ObjectId.isValid(id)) {
+    console.log('ID inválido:', id);
     return res.status(400).json({ success: false, message: 'ID inválido.' });
   }
 
@@ -343,10 +510,11 @@ exports.getBookingById = async (req, res) => {
       reservation: reservationData,
     });
   } catch (err) {
-    console.error('Erro ao buscar reserva:', err);
+    console.error('Erro detalhado:', err);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor.',
+      error: err.message
     });
   }
 };
@@ -371,6 +539,268 @@ exports.getUserBookings = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor.',
+    });
+  }
+};
+
+exports.checkRecorrencia = async (req, res) => {
+  try {
+    const {
+      quadra_id,
+      data_inicial,
+      horario_inicio,
+      horario_fim,
+      duracao_meses,
+      dia_semana
+    } = req.body;
+
+    console.log('Verificando recorrência:', {
+      quadra_id,
+      data_inicial,
+      horario_inicio,
+      horario_fim,
+      duracao_meses,
+      dia_semana
+    });
+
+    // Validar dados de entrada
+    if (!quadra_id || !data_inicial || !horario_inicio || !horario_fim || !duracao_meses || dia_semana === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Todos os campos são obrigatórios'
+      });
+    }
+
+    // Gerar todas as datas da recorrência
+    const dataInicio = new Date(data_inicial);
+    const dataFim = new Date(data_inicial);
+    dataFim.setMonth(dataFim.getMonth() + duracao_meses);
+    
+    const datasRecorrencia = [];
+    let dataAtual = new Date(dataInicio);
+
+    while (dataAtual <= dataFim) {
+      if (dataAtual.getDay() === dia_semana) {
+        datasRecorrencia.push(new Date(dataAtual));
+      }
+      dataAtual.setDate(dataAtual.getDate() + 1);
+    }
+
+    // Verificar disponibilidade para cada data
+    const disponibilidade = await Promise.all(
+      datasRecorrencia.map(async (data) => {
+        const reservaExistente = await Booking.findOne({
+          quadra_id,
+          data: {
+            $gte: new Date(data).setHours(0,0,0,0),
+            $lt: new Date(data).setHours(23,59,59,999)
+          },
+          horario_inicio,
+          horario_fim,
+          status: { $ne: 'cancelada' }
+        });
+
+        return {
+          data: data.toISOString().split('T')[0],
+          disponivel: !reservaExistente,
+          conflito: reservaExistente ? {
+            reserva_id: reservaExistente._id,
+            usuario: reservaExistente.usuario_id
+          } : null
+        };
+      })
+    );
+
+    // Calcular resumo
+    const totalDatas = disponibilidade.length;
+    const datasDisponiveis = disponibilidade.filter(d => d.disponivel).length;
+    const datasIndisponiveis = totalDatas - datasDisponiveis;
+
+    return res.status(200).json({
+      success: true,
+      resumo: {
+        total_datas: totalDatas,
+        datas_disponiveis: datasDisponiveis,
+        datas_indisponiveis: datasIndisponiveis,
+        periodo: {
+          inicio: dataInicio.toISOString().split('T')[0],
+          fim: dataFim.toISOString().split('T')[0]
+        }
+      },
+      disponibilidade,
+      metadata: {
+        quadra_id,
+        horario: `${horario_inicio} - ${horario_fim}`,
+        dia_semana,
+        duracao_meses
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao verificar recorrência:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao verificar disponibilidade da recorrência',
+      error: error.message
+    });
+  }
+};
+
+exports.checkAvailability = async (req, res) => {
+  try {
+    const { quadra_id, data } = req.query;
+    
+    if (!quadra_id || !data) {
+      return res.status(400).json({
+        success: false,
+        message: 'Quadra ID e data são obrigatórios'
+      });
+    }
+
+    // Buscar configurações de negócio
+    const businessConfig = await BusinessConfig.findOne();
+    if (!businessConfig) {
+      return res.status(404).json({
+        success: false,
+        message: 'Configurações de negócio não encontradas'
+      });
+    }
+
+    // Gerar slots de horário
+    const horariosNobres = await calcularHorariosNobres(quadra_id, new Date(data));
+    const slots = await generateTimeSlots(
+      quadra_id,
+      new Date(data),
+      businessConfig.horario_abertura,
+      businessConfig.horario_fechamento,
+      horariosNobres
+    );
+
+    res.status(200).json({
+      success: true,
+      slots: slots
+    });
+
+  } catch (error) {
+    console.error('Erro ao verificar disponibilidade:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao verificar disponibilidade',
+      error: error.message
+    });
+  }
+};
+
+// Função auxiliar para gerar slots de tempo
+const generateTimeSlots = async (quadraId, data) => {
+  const businessConfig = await BusinessConfig.findOne();
+  if (!businessConfig) {
+    throw new Error('Configurações de negócio não encontradas');
+  }
+
+  const slots = [];
+  const horaAbertura = parseInt(businessConfig.horario_abertura.split(':')[0]);
+  const horaFechamento = parseInt(businessConfig.horario_fechamento.split(':')[0]);
+
+  for (let hora = horaAbertura; hora < horaFechamento; hora++) {
+    const horarioInicio = `${hora.toString().padStart(2, '0')}:00`;
+    const horarioFim = `${(hora + 1).toString().padStart(2, '0')}:00`;
+
+    const disponibilidade = await BookingService.checkAvailability(
+      quadraId,
+      data,
+      horarioInicio,
+      horarioFim
+    );
+
+    slots.push({
+      horario_inicio: horarioInicio,
+      horario_fim: horarioFim,
+      disponivel: disponibilidade.disponivel,
+      valor: hora >= 18 && hora < 22 ? businessConfig.valor_hora_nobre : businessConfig.valor_hora_padrao
+    });
+  }
+
+  return slots;
+};
+
+exports.checkTimeSlots = async (req, res) => {
+  try {
+    const { quadra_id, data } = req.query;
+    
+    console.log('1. Iniciando checkTimeSlots:', { quadra_id, data });
+
+    // Buscar a quadra e as configurações de negócio em paralelo
+    const [quadra, businessConfig] = await Promise.all([
+      Court.findById(quadra_id),
+      BusinessConfig.findOne()
+    ]);
+
+    if (!quadra) {
+      return res.status(404).json({
+        success: false,
+        message: 'Quadra não encontrada'
+      });
+    }
+
+    if (!businessConfig) {
+      return res.status(500).json({
+        success: false,
+        message: 'Configurações de negócio não encontradas'
+      });
+    }
+
+    // Buscar agendamentos do dia
+    const dataInicio = dayjs(data).startOf('day').toDate();
+    const dataFim = dayjs(data).endOf('day').toDate();
+
+    const agendamentos = await Booking.find({
+      quadra_id, // Corrigido de quadra para quadra_id
+      data: {
+        $gte: dataInicio,
+        $lte: dataFim
+      },
+      status: { $ne: 'cancelada' }
+    });
+
+    console.log('3. Agendamentos encontrados:', agendamentos.length);
+
+    // Gerar slots usando horário do BusinessConfig
+    const slots = BookingService.checkAvailability(
+      {
+        inicio: businessConfig.horario_abertura,
+        fim: businessConfig.horario_fechamento
+      },
+      agendamentos,
+      data,
+      {
+        valor_hora_padrao: businessConfig.valor_hora_padrao,
+        valor_hora_nobre: businessConfig.valor_hora_nobre,
+        percentual_hora_nobre: businessConfig.percentual_hora_nobre
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      slots,
+      metadata: {
+        quadra_id,
+        quadra_nome: quadra.nome,
+        data: dayjs(data).format('YYYY-MM-DD'),
+        total_slots: slots.length,
+        horario_funcionamento: {
+          inicio: businessConfig.horario_abertura,
+          fim: businessConfig.horario_fechamento
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao verificar slots:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao verificar slots de horário',
+      error: error.message
     });
   }
 };
