@@ -11,7 +11,12 @@ import {
   Button,
   Chip,
   IconButton,
-  Snackbar
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -31,6 +36,7 @@ const ReservationReview = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const [isCanceled, setIsCanceled] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
 
   const fetchReservationDetails = async () => {
     try {
@@ -89,7 +95,11 @@ const ReservationReview = () => {
     });
   };
 
-  const handleCancel = async () => {
+  const handleCancelClick = () => {
+    setOpenConfirmDialog(true);
+  };
+
+  const handleCancelConfirm = async () => {
     try {
       setIsCanceling(true);
       
@@ -118,6 +128,7 @@ const ReservationReview = () => {
       });
     } finally {
       setIsCanceling(false);
+      setOpenConfirmDialog(false);
     }
   };
 
@@ -446,7 +457,7 @@ const ReservationReview = () => {
                 startIcon={<CancelIcon />}
                 variant="contained"
                 color="error"
-                onClick={handleCancel}
+                onClick={handleCancelClick}
                 disabled={isCanceled || isCanceling || reservation?.status === 'cancelada'}
                 fullWidth
                 sx={{ flex: 1 }}
@@ -473,6 +484,29 @@ const ReservationReview = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        {/* Modal de Confirmação */}
+        <Dialog
+          open={openConfirmDialog}
+          onClose={() => setOpenConfirmDialog(false)}
+        >
+          <DialogTitle>Confirmar Cancelamento</DialogTitle>
+          
+          <DialogContent>
+            <DialogContentText>
+              Tem certeza de que deseja cancelar esta reserva?
+            </DialogContentText>
+          </DialogContent>
+          
+          <DialogActions>
+            <Button onClick={() => setOpenConfirmDialog(false)} color="primary">
+              Cancelar
+            </Button>
+            <Button onClick={handleCancelConfirm} color="primary" autoFocus>
+              Confirmar
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </PageContainer>
   );

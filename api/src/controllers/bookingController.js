@@ -760,3 +760,42 @@ exports.getBooking = async (req, res) => {
     });
   }
 };
+
+exports.updateBooking = async (req, res) => {
+  try {
+    console.log('1. Iniciando atualização da reserva:', {
+      id: req.params.id,
+      updates: req.body
+    });
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true }
+    );
+
+    if (!updatedBooking) {
+      console.log('2. Reserva não encontrada');
+      return res.status(404).json({
+        success: false,
+        message: 'Reserva não encontrada'
+      });
+    }
+
+    console.log('3. Reserva atualizada com sucesso:', updatedBooking);
+
+    res.status(200).json({
+      success: true,
+      message: 'Reserva atualizada com sucesso',
+      booking: updatedBooking
+    });
+
+  } catch (error) {
+    console.error('4. Erro ao atualizar reserva:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao atualizar reserva',
+      error: error.message
+    });
+  }
+};
