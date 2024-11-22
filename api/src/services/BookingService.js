@@ -1,3 +1,5 @@
+const Booking = require('../models/Booking');
+
 class BookingService {
   static checkAvailability(horarioFuncionamento, agendamentos = [], data, config) {
     try {
@@ -51,24 +53,37 @@ class BookingService {
   }
 
   static async verificarConflitos(quadraId, data, horarioInicio, horarioFim) {
-    const dataInicio = new Date(data);
-    dataInicio.setHours(0, 0, 0, 0);
-    
-    const dataFim = new Date(data);
-    dataFim.setHours(23, 59, 59, 999);
+    try {
+      console.log('Verificando conflitos para:', {
+        quadraId,
+        data,
+        horarioInicio,
+        horarioFim
+      });
 
-    const reservasConflitantes = await Booking.find({
-      quadra_id: quadraId,
-      data: {
-        $gte: dataInicio,
-        $lte: dataFim
-      },
-      horario_inicio,
-      horario_fim,
-      status: { $ne: 'cancelada' }
-    });
+      const dataInicio = new Date(data);
+      dataInicio.setHours(0, 0, 0, 0);
+      
+      const dataFim = new Date(data);
+      dataFim.setHours(23, 59, 59, 999);
 
-    return reservasConflitantes.length > 0;
+      const reservasConflitantes = await Booking.find({
+        quadra_id: quadraId,
+        data: {
+          $gte: dataInicio,
+          $lte: dataFim
+        },
+        horario_inicio: horarioInicio,
+        horario_fim: horarioFim,
+        status: { $ne: 'cancelada' }
+      });
+
+      console.log('Reservas conflitantes encontradas:', reservasConflitantes.length);
+      return reservasConflitantes.length > 0;
+    } catch (error) {
+      console.error('Erro ao verificar conflitos:', error);
+      throw error;
+    }
   }
 }
 

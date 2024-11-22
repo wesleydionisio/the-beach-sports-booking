@@ -1,103 +1,194 @@
-import React, { useEffect, useState } from 'react';
-import { Container, Typography, Box, Button, CircularProgress } from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { 
+  Box, 
+  Typography, 
+  Card, 
+  CardMedia, 
+  CardContent,
+  Button,
+  Chip,
+  Stack,
+  IconButton,
+  Snackbar,
+  Alert
+} from '@mui/material';
+import { useParams } from 'react-router-dom';
+import ShareIcon from '@mui/icons-material/Share';
+import CancelIcon from '@mui/icons-material/Cancel';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import SportsIcon from '@mui/icons-material/Sports';
+import { formatDistanceToNow, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import axios from '../api/apiService';
 
 const ReviewPage = () => {
-  const { reservationId } = useParams();
-  const navigate = useNavigate();
-  const [reservation, setReservation] = useState(null);
+  const { id } = useParams();
+  const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [isCanceled, setIsCanceled] = useState(false);
 
-  useEffect(() => {
-    const fetchReservation = async () => {
-      try {
-        console.log('Buscando reserva com ID:', reservationId);
-        const response = await axios.get(`/bookings/${reservationId}`);
-        console.log('Resposta completa da API:', response.data);
-        
-        if (response.data.success) {
-          console.log('Dados da reserva:', response.data.reservation);
-          setReservation(response.data.reservation);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar detalhes da reserva:', error);
-        console.log('Detalhes do erro:', error.response?.data);
-      } finally {
-        setLoading(false);
-      }
+  // Status styles
+  const getStatusColor = (status) => {
+    const statusMap = {
+      'confirmado': 'success',
+      'pendente': 'warning',
+      'cancelado': 'error'
     };
+    return statusMap[status.toLowerCase()] || 'default';
+  };
 
-    if (reservationId) {
-      fetchReservation();
-    }
-  }, [reservationId]);
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setSnackbar({
+      open: true,
+      message: 'Link copiado para a área de transferência!',
+      severity: 'success'
+    });
+  };
 
-  // Log quando o estado reservation é atualizado
-  useEffect(() => {
-    console.log('Esta reservation atualizado:', reservation);
-  }, [reservation]);
-
-  const handleCancelReservation = async () => {
+  const handleCancel = async () => {
     try {
-      const response = await axios.post(`/bookings/${reservationId}/cancel`);
-      if (response.data.success) {
-        alert('Reserva cancelada com sucesso!');
-        navigate('/'); // Redireciona para a página inicial
-      } else {
-        alert('Não foi possível cancelar a reserva.');
-      }
+      await axios.post(`/bookings/${id}/cancel`);
+      setIsCanceled(true);
+      setSnackbar({
+        open: true,
+        message: 'Reserva cancelada com sucesso!',
+        severity: 'success'
+      });
     } catch (error) {
-      console.error('Erro ao cancelar reserva:', error);
-      alert(error.response?.data?.message || 'Erro ao cancelar reserva.');
+      setSnackbar({
+        open: true,
+        message: 'Erro ao cancelar reserva',
+        severity: 'error'
+      });
     }
   };
 
-  if (loading) {
-    return <CircularProgress />;
-  }
-
   return (
-    <Container>
-      <Box>
-        <Typography variant="h5" align="center" gutterBottom>
-          Revisão da Reserva
+    <Box sx={{ maxWidth: 600, mx: 'auto', p: 2 }}>
+      {/* Cabeçalho */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h4" component="h1" sx={{ mb: 1 }}>
+          Agendamento
         </Typography>
-        {reservation && (
-          <>
-            <Typography>Nome da Quadra: {reservation.nome}</Typography>
-            <Typography>Data: {reservation.data}</Typography>
-            <Typography>
-              Horário: {reservation.horario_inicio} - {reservation.horario_fim}
-            </Typography>
-            <Typography>Esporte: {reservation.esporte}</Typography>
-            <Typography>
-              Forma de Pagamento: {reservation.pagamento}
-            </Typography>
-            <Typography>
-              Total: R$ {reservation.total.toFixed(2)}
-            </Typography>
-            <Box mt={2}>
-              <Button 
-                variant="contained" 
-                color="primary"
-                href="/"
-              >
-                Voltar ao Início
-              </Button>
-              <Button 
-                variant="outlined" 
-                color="secondary" 
-                sx={{ ml: 2 }}
-                onClick={handleCancelReservation}
-              >
-                Cancelar Reserva
-              </Button>
-            </Box>
-          </>
-        )}
+        <Typography variant="subtitle1" color="text.secondary">
+          ID: {id}
+        </Typography>
       </Box>
-    </Container>
+
+      {/* Info do Cliente */}
+      <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+        <Typography variant="body1">
+          Solicitado por <strong>João Silva</strong> em:{' '}
+          {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+        </Typography>
+      </Box>
+
+      {/* Card Principal */}
+      <Card sx={{ mb: 3, position: 'relative' }}>
+        {/* Tempo até o início */}
+        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <AccessTimeIcon color="action" />
+            <Typography>
+              Começa em: {formatDistanceToNow(new Date(), { locale: ptBR })}
+            </Typography>
+          </Stack>
+        </Box>
+
+        {/* Horário e Status */}
+        <Box sx={{ p: 2 }}>
+          <Typography variant="h5" sx={{ mb: 1 }}>
+            Quinta-feira, 15:00 - 16:00
+          </Typography>
+          <Chip 
+            label="Confirmado" 
+            color={getStatusColor('confirmado')}
+            sx={{ mb: 2 }}
+          />
+          
+          {/* Esporte */}
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+            <SportsIcon />
+            <Typography>Futebol</Typography>
+          </Stack>
+        </Box>
+
+        {/* Card da Quadra */}
+        <Card sx={{ mx: 2, mb: 2, position: 'relative' }}>
+          <CardMedia
+            component="img"
+            height="160"
+            image="/path/to/court/image.jpg"
+            alt="Quadra"
+            sx={{
+              filter: 'brightness(0.7)',
+            }}
+          />
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              p: 2,
+              background: 'linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0))',
+            }}
+          >
+            <Typography variant="h6" color="white">
+              Quadra Principal
+            </Typography>
+          </Box>
+        </Card>
+
+        {/* Info de Pagamento */}
+        <Box sx={{ p: 2, bgcolor: 'grey.50' }}>
+          <Typography variant="subtitle1" sx={{ mb: 1 }}>
+            Pagamento:
+          </Typography>
+          <Typography variant="h6">
+            Valor total da reserva: R$ 120,00
+          </Typography>
+        </Box>
+      </Card>
+
+      {/* Ações */}
+      <Stack direction="row" spacing={2}>
+        <Button
+          variant="outlined"
+          startIcon={<ShareIcon />}
+          onClick={handleShare}
+          fullWidth
+        >
+          Compartilhar
+        </Button>
+        <Button
+          variant="contained"
+          color="error"
+          startIcon={<CancelIcon />}
+          onClick={handleCancel}
+          disabled={isCanceled}
+          fullWidth
+        >
+          {isCanceled ? 'Cancelado' : 'Cancelar'}
+        </Button>
+      </Stack>
+
+      {/* Snackbar para feedback */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert 
+          severity={snackbar.severity}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

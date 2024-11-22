@@ -1,7 +1,7 @@
 // src/components/CourtCard.jsx
 
-import React, { useState } from 'react';
-import { Card, CardContent, Button, Typography, Box, Chip } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, Button, Typography, Box } from '@mui/material';
 import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
 import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
 import SportsBasketballIcon from '@mui/icons-material/SportsBasketball';
@@ -9,9 +9,38 @@ import SportsTennisIcon from '@mui/icons-material/SportsTennis';
 import SportsIcon from '@mui/icons-material/Sports';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import SportLabel from './common/SportLabel';
+import { blue } from '@mui/material/colors';
 
 const CourtCard = ({ court }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [icons, setIcons] = useState({});
+
+  // Mapa de ícones fallback
+  const SPORT_ICONS = {
+    'Futebol': SportsSoccerIcon,
+    'Basquete': SportsBasketballIcon,
+    'Vôlei': SportsVolleyballIcon,
+    'Tênis': SportsTennisIcon,
+    'default': SportsIcon
+  };
+
+  // Função para sanitizar SVG
+  const sanitizeSvg = async (url) => {
+    try {
+      const response = await fetch(url);
+      const svgText = await response.text();
+      
+      const sanitized = svgText
+        .replace(/fill="[^"]*"/g, '')
+        .replace(/stroke="[^"]*"/g, '');
+      
+      return sanitized;
+    } catch (error) {
+      console.error('Erro ao sanitizar SVG:', error);
+      return '';
+    }
+  };
 
   // Pré-carregar a imagem
   React.useEffect(() => {
@@ -28,11 +57,6 @@ const CourtCard = ({ court }) => {
     'Tênis': SportsTennisIcon,
   };
 
-  const getEsporteIcon = (esporte) => {
-    const EsporteIcon = esporteIcons[esporte] || SportsIcon;
-    return <EsporteIcon sx={{ fontSize: 16 }} />;
-  };
-
   const renderEsportes = (esportes) => {
     if (!esportes || !Array.isArray(esportes)) return null;
     
@@ -43,29 +67,13 @@ const CourtCard = ({ court }) => {
         gap: 1,
         mt: 1
       }}>
-        {esportes.map((esporte, index) => {
-          const nomeEsporte = typeof esporte === 'object' ? esporte.nome : esporte;
-          return (
-            <Chip
-              key={index}
-              icon={getEsporteIcon(nomeEsporte)}
-              label={nomeEsporte}
-              size="small"
-              sx={{
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                color: 'white',
-                '& .MuiChip-icon': {
-                  color: 'white',
-                },
-                backdropFilter: 'blur(4px)',
-                px: 1,
-                '& .MuiChip-label': {
-                  px: 1,
-                }
-              }}
-            />
-          );
-        })}
+        {esportes.map((esporte, index) => (
+          <SportLabel
+            key={index}
+            label={esporte.nome}
+            sportData={esporte}
+          />
+        ))}
       </Box>
     );
   };

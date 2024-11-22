@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import axios from '../api/apiService'; // Serviço de API
 import { useNavigate } from 'react-router-dom';
+import PageContainer from '../components/layout/PageContainer';
 
 const LoginPage = () => {
   const [tab, setTab] = useState(0); // Tab 0 = Login, Tab 1 = Criar Conta
@@ -128,134 +129,136 @@ const LoginPage = () => {
   };
 
   return (
-    <Container 
-      maxWidth="sm" 
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}
-    >
-      <Box 
-        p={3} 
-        boxShadow={3} 
-        borderRadius={2}
+    <PageContainer withHeader={false}>
+      <Container 
+        maxWidth="sm" 
         sx={{
-          width: '100%',
-          backgroundColor: 'white',
-          my: 2 // margem vertical para evitar colagem nas bordas em telas muito pequenas
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
-        <Typography 
-          variant="h5" 
-          align="center" 
-          gutterBottom
-          sx={{ fontWeight: 500 }}
+        <Box 
+          p={3} 
+          boxShadow={3} 
+          borderRadius={2}
+          sx={{
+            width: '100%',
+            backgroundColor: 'white',
+            my: 2 // margem vertical para evitar colagem nas bordas em telas muito pequenas
+          }}
         >
-          Login ou Criar Conta
-        </Typography>
-        <Tabs
-          value={tab}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
-          centered
-        >
-          <Tab label="Login" />
-          <Tab label="Criar Conta" />
-        </Tabs>
-        <Box mt={3}>
-          {tab === 0 ? (
-            // Formulário de Login
-            <Box>
-              <TextField
-                label="Email"
-                type="email"
-                fullWidth
-                margin="normal"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-              <TextField
-                label="Senha"
-                type="password"
-                fullWidth
-                margin="normal"
-                value={formData.senha}
-                onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-              />
-              {error && (
-                <Typography variant="body2" color="error" align="center" mt={1}>
-                  {error}
-                </Typography>
-              )}
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                onClick={handleLogin}
-                sx={{ mt: 2 }}
-                disabled={loading}
-              >
-                {loading ? 'Fazendo Login...' : 'Fazer Login'}
-              </Button>
-            </Box>
-          ) : (
-            // Formulário de Criação de Conta
-            <Box>
-              <TextField
-                label="Nome"
-                fullWidth
-                margin="normal"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              />
-              <TextField
-                label="Telefone"
-                type="tel"
-                fullWidth
-                margin="normal"
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-              />
-              <TextField
-                label="Email"
-                type="email"
-                fullWidth
-                margin="normal"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-              <TextField
-                label="Senha"
-                type="password"
-                fullWidth
-                margin="normal"
-                value={formData.senha}
-                onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-              />
-              {error && (
-                <Typography variant="body2" color="error" align="center" mt={1}>
-                  {error}
-                </Typography>
-              )}
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                onClick={handleCreateAccount}
-                sx={{ mt: 2 }}
-                disabled={loading}
-              >
-                {loading ? 'Criando Conta...' : 'Criar Conta'}
-              </Button>
-            </Box>
-          )}
+          <Typography 
+            variant="h5" 
+            align="center" 
+            gutterBottom
+            sx={{ fontWeight: 500 }}
+          >
+            Login ou Criar Conta
+          </Typography>
+          <Tabs
+            value={tab}
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+            variant="fullWidth"
+            centered
+          >
+            <Tab label="Login" />
+            <Tab label="Criar Conta" />
+          </Tabs>
+          <Box mt={3}>
+            {tab === 0 ? (
+              // Formulário de Login
+              <Box>
+                <TextField
+                  label="Email"
+                  type="email"
+                  fullWidth
+                  margin="normal"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+                <TextField
+                  label="Senha"
+                  type="password"
+                  fullWidth
+                  margin="normal"
+                  value={formData.senha}
+                  onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                />
+                {error && (
+                  <Typography variant="body2" color="error" align="center" mt={1}>
+                    {error}
+                  </Typography>
+                )}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  onClick={handleLogin}
+                  sx={{ mt: 2 }}
+                  disabled={loading}
+                >
+                  {loading ? 'Fazendo Login...' : 'Fazer Login'}
+                </Button>
+              </Box>
+            ) : (
+              // Formulário de Criação de Conta
+              <Box>
+                <TextField
+                  label="Nome"
+                  fullWidth
+                  margin="normal"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                />
+                <TextField
+                  label="Telefone"
+                  type="tel"
+                  fullWidth
+                  margin="normal"
+                  value={formData.telefone}
+                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                />
+                <TextField
+                  label="Email"
+                  type="email"
+                  fullWidth
+                  margin="normal"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+                <TextField
+                  label="Senha"
+                  type="password"
+                  fullWidth
+                  margin="normal"
+                  value={formData.senha}
+                  onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                />
+                {error && (
+                  <Typography variant="body2" color="error" align="center" mt={1}>
+                    {error}
+                  </Typography>
+                )}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  onClick={handleCreateAccount}
+                  sx={{ mt: 2 }}
+                  disabled={loading}
+                >
+                  {loading ? 'Criando Conta...' : 'Criar Conta'}
+                </Button>
+              </Box>
+            )}
+          </Box>
         </Box>
-      </Box>
-    </Container>
+      </Container>
+    </PageContainer>
   );
 };
 

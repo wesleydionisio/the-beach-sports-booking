@@ -327,63 +327,34 @@ exports.createBooking = async (req, res) => {
 // Função para cancelar uma reserva
 exports.cancelBooking = async (req, res) => {
   try {
-    const { id } = req.params; // ID da reserva a ser cancelada
-
-    // Verificar se a reserva existe e pertence ao usuário
-    const booking = await Booking.findOne({ _id: id, usuario_id: req.user.id });
-    if (!booking) {
-      console.log(`Reserva com ID ${id} não encontrada ou não pertence ao usuário.`);
+    console.log('1. Iniciando cancelamento da reserva:', req.params.id);
+    
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { status: 'cancelada' },
+      { new: true }
+    );
+    
+    if (!updatedBooking) {
       return res.status(404).json({
         success: false,
-        message: 'Reserva não encontrada ou não pertence ao usuário.',
+        message: 'Reserva não encontrada'
       });
     }
 
-    // Verificar se a reserva já está cancelada
-    if (booking.status === 'cancelada') {
-      console.log(`Reserva com ID ${id} já foi cancelada.`);
-      return res.status(400).json({
-        success: false,
-        message: 'A reserva já foi cancelada.',
-      });
-    }
-
-    // Verificar se a reserva já começou
-    const now = Date.now(); // Timestamp atual em milissegundos
-
-    // Extrair componentes de data e hora da reserva
-    const bookingDateTime = new Date(booking.data);
-    const [hour, minute] = booking.horario_inicio.split(':').map(Number);
-    bookingDateTime.setHours(hour, minute, 0, 0);
-    const bookingTimestamp = bookingDateTime.getTime();
-
-    console.log(`Data atual (backend): ${new Date(now).toISOString()}`);
-    console.log(`Data da reserva (backend): ${bookingDateTime.toISOString()}`);
-
-    if (now >= bookingTimestamp) {
-      console.log(`Não é possível cancelar uma reserva que já começou. (now: ${new Date(now).toISOString()} >= bookingDateTime: ${bookingDateTime.toISOString()})`);
-      return res.status(400).json({
-        success: false,
-        message: 'Não é possível cancelar uma reserva que já começou.',
-      });
-    }
-
-    // Atualizar o status da reserva para 'cancelada'
-    booking.status = 'cancelada';
-    await booking.save();
-
-    console.log(`Reserva com ID ${id} foi cancelada com sucesso.`);
+    console.log('2. Reserva cancelada:', updatedBooking);
 
     res.status(200).json({
       success: true,
-      message: 'Reserva cancelada com sucesso.',
-      reserva: booking,
+      message: 'Reserva cancelada com sucesso',
+      booking: updatedBooking
     });
-  } catch (err) {
-    console.error('Erro ao cancelar reserva:', err);
+
+  } catch (error) {
+    console.error('Erro ao cancelar reserva:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao cancelar reserva.',
+      message: 'Erro ao cancelar reserva'
     });
   }
 };
@@ -545,94 +516,32 @@ exports.getUserBookings = async (req, res) => {
 
 exports.checkRecorrencia = async (req, res) => {
   try {
-    const {
-      quadra_id,
-      data_inicial,
-      horario_inicio,
-      horario_fim,
-      duracao_meses,
-      dia_semana
-    } = req.body;
+    const { quadra_id, data, horario_inicio, horario_fim } = req.body;
 
-    console.log('Verificando recorrência:', {
-      quadra_id,
-      data_inicial,
-      horario_inicio,
-      horario_fim,
-      duracao_meses,
-      dia_semana
-    });
-
-    // Validar dados de entrada
-    if (!quadra_id || !data_inicial || !horario_inicio || !horario_fim || !duracao_meses || dia_semana === undefined) {
+    // Validação dos dados de entrada
+    if (!quadra_id || !data || !horario_inicio || !horario_fim) {
       return res.status(400).json({
         success: false,
-        message: 'Todos os campos são obrigatórios'
+        message: 'Dados incompletos para verificação',
+        required: ['quadra_id', 'data', 'horario_inicio', 'horario_fim']
       });
     }
 
-    // Gerar todas as datas da recorrência
-    const dataInicio = new Date(data_inicial);
-    const dataFim = new Date(data_inicial);
-    dataFim.setMonth(dataFim.getMonth() + duracao_meses);
-    
-    const datasRecorrencia = [];
-    let dataAtual = new Date(dataInicio);
-
-    while (dataAtual <= dataFim) {
-      if (dataAtual.getDay() === dia_semana) {
-        datasRecorrencia.push(new Date(dataAtual));
-      }
-      dataAtual.setDate(dataAtual.getDate() + 1);
-    }
-
-    // Verificar disponibilidade para cada data
-    const disponibilidade = await Promise.all(
-      datasRecorrencia.map(async (data) => {
-        const reservaExistente = await Booking.findOne({
-          quadra_id,
-          data: {
-            $gte: new Date(data).setHours(0,0,0,0),
-            $lt: new Date(data).setHours(23,59,59,999)
-          },
-          horario_inicio,
-          horario_fim,
-          status: { $ne: 'cancelada' }
-        });
-
-        return {
-          data: data.toISOString().split('T')[0],
-          disponivel: !reservaExistente,
-          conflito: reservaExistente ? {
-            reserva_id: reservaExistente._id,
-            usuario: reservaExistente.usuario_id
-          } : null
-        };
-      })
+    // Verificar se existe conflito para este horário
+    const conflito = await BookingService.verificarConflitos(
+      quadra_id,
+      data,
+      horario_inicio,
+      horario_fim
     );
-
-    // Calcular resumo
-    const totalDatas = disponibilidade.length;
-    const datasDisponiveis = disponibilidade.filter(d => d.disponivel).length;
-    const datasIndisponiveis = totalDatas - datasDisponiveis;
 
     return res.status(200).json({
       success: true,
-      resumo: {
-        total_datas: totalDatas,
-        datas_disponiveis: datasDisponiveis,
-        datas_indisponiveis: datasIndisponiveis,
-        periodo: {
-          inicio: dataInicio.toISOString().split('T')[0],
-          fim: dataFim.toISOString().split('T')[0]
-        }
-      },
-      disponibilidade,
-      metadata: {
-        quadra_id,
-        horario: `${horario_inicio} - ${horario_fim}`,
-        dia_semana,
-        duracao_meses
+      disponivel: !conflito,
+      data: data,
+      horario: {
+        inicio: horario_inicio,
+        fim: horario_fim
       }
     });
 
@@ -640,7 +549,7 @@ exports.checkRecorrencia = async (req, res) => {
     console.error('Erro ao verificar recorrência:', error);
     return res.status(500).json({
       success: false,
-      message: 'Erro ao verificar disponibilidade da recorrência',
+      message: 'Erro ao verificar disponibilidade do horário',
       error: error.message
     });
   }
@@ -800,6 +709,53 @@ exports.checkTimeSlots = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Erro ao verificar slots de horário',
+      error: error.message
+    });
+  }
+}; 
+
+exports.getBooking = async (req, res) => {
+  try {
+    console.log('1. ID da reserva:', req.params.id);
+
+    const booking = await Booking.findById(req.params.id)
+      .populate('usuario_id', 'nome email telefone') // Garantir que o populate está correto
+      .populate('quadra_id')
+      .populate('esporte_id');
+
+    console.log('2. Reserva encontrada:', booking);
+    console.log('3. Dados do usuário:', booking.usuario_id); // Verificar se o usuário está sendo populado
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reserva não encontrada'
+      });
+    }
+
+    // Formatar os dados da reserva
+    const formattedBooking = {
+      ...booking.toObject(),
+      cliente_nome: booking.usuario_id?.nome,
+      cliente_email: booking.usuario_id?.email,
+      cliente_telefone: booking.usuario_id?.telefone
+    };
+
+    console.log('4. Dados formatados:', {
+      usuario_id: booking.usuario_id,
+      cliente_nome: formattedBooking.cliente_nome
+    });
+
+    res.status(200).json({
+      success: true,
+      reservation: formattedBooking
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar reserva:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar reserva',
       error: error.message
     });
   }

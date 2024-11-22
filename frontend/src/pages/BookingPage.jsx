@@ -7,7 +7,6 @@ import {
   Button, 
   CircularProgress,
   Grid,
-  Chip,
   Stack,
   Skeleton,
   Fade
@@ -34,6 +33,7 @@ import utc from 'dayjs/plugin/utc'; // Para manipulação de UTC
 import BookingSummary from '../components/booking/BookingSummary';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import BookingModals from '../components/booking/BookingModals';
+import SportLabel from '../components/common/SportLabel';
 
 const OptionSkeleton = ({ title }) => (
   <Box>
@@ -487,19 +487,10 @@ const BookingPage = () => {
                 justifyContent={{ xs: 'center', md: 'flex-start' }}
               >
                 {court?.esportes_permitidos?.map((esporte) => (
-                  <Chip
+                  <SportLabel
                     key={esporte._id}
-                    icon={sportIcons[esporte.nome]}
                     label={esporte.nome}
-                    sx={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                      backdropFilter: 'blur(8px)',
-                      WebkitBackdropFilter: 'blur(4px)',
-                      color: 'white',
-                      '& .MuiChip-icon': {
-                        color: 'white'
-                      }
-                    }}
+                    sportData={esporte}
                   />
                 ))}
               </Stack>
@@ -679,7 +670,7 @@ const BookingPage = () => {
                         {selectedDate && selectedSlot ? (
                           <>
                             <Typography variant="body1">
-                              {selectedSlot.horario_inicio}h �� {dayjs(selectedDate).format('DD/MM/YYYY')}
+                              {selectedSlot.horario_inicio}h  {dayjs(selectedDate).format('DD/MM/YYYY')}
                             </Typography>
                             <Box sx={{ 
                               display: 'flex', 
@@ -742,14 +733,15 @@ const BookingPage = () => {
                     spacing={3} 
                     sx={{ 
                       mt: 0,
-                      height: 'auto', // Ajusta a altura para o conteúdo
                       '& .MuiGrid-item': {
-                        paddingTop: 0 // Remove o padding superior dos itens do grid
+                        paddingTop: 0, // Remove o padding superior dos itens do grid
+                        display: 'flex',
+                        flexDirection: 'column'
                       }
                     }}
                   >
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ mb: 0 }}>
+                      <Box sx={{ height: '100%' }}> {/* Container com altura 100% */}
                         <Typography variant="h6" sx={{ mb: 1, fontWeight: 550 }}>
                           Selecione um esporte:
                         </Typography>
@@ -762,7 +754,7 @@ const BookingPage = () => {
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ mb: 0 }}>
+                      <Box sx={{ height: '100%' }}> {/* Container com altura 100% */}
                         <Typography variant="h6" sx={{ mb: 1, fontWeight: 550 }}>
                           Forma de pagamento:
                         </Typography>
@@ -774,9 +766,9 @@ const BookingPage = () => {
                     </Grid>
                   </Grid>
 
-                  {/* Opções Adicionais */}
-                  <Box sx={{ mb: 0 }}>
-                    <Typography variant="h6" sx={{ mb: 1, mt: 1, fontWeight: 550 }}>
+                  {/* Opções Adicionais sem margem superior */}
+                  <Box sx={{ mt: 0 }}>
+                    <Typography variant="h6" sx={{ mb: 1, fontWeight: 550 }}>
                       Opções adicionais:
                     </Typography>
                     <BookingModals
