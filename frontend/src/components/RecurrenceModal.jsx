@@ -20,6 +20,7 @@ import { ptBR } from 'date-fns/locale';
 import axios from '../api/apiService';
 import LoadingSkeleton from './LoadingSkeleton';
 import RecurrencePreview from './RecurrencePreview';
+import usePreventScroll from '../hooks/usePreventScroll';
 
 const RecurrenceModal = ({ 
   open, 
@@ -34,6 +35,8 @@ const RecurrenceModal = ({
   const [loading, setLoading] = useState(false);
   const [previewDates, setPreviewDates] = useState([]);
   const [error, setError] = useState('');
+
+  usePreventScroll(open);
 
   console.log('RecurrenceModal Props:', {
     selectedSlot,
@@ -144,76 +147,149 @@ const RecurrenceModal = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Agendar Horário Fixo</DialogTitle>
-      <DialogContent>
-        {process.env.NODE_ENV === 'development' && (
-          <Box sx={{ mb: 2, p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-            <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap' }}>
-              Debug Info:
-              esporte: {selectedSlot?.esporte}
-              horários: {selectedSlot?.horario_inicio} - {selectedSlot?.horario_fim}
-              disabled: {String(disabled)}
-            </Typography>
+    <Dialog 
+      open={open} 
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      sx={{
+        '& .MuiDialog-paper': {
+          height: { xs: '100%', sm: '600px' },
+          margin: { xs: 0, sm: 2 },
+          maxHeight: { xs: '100%', sm: 'calc(100% - 32px)' },
+          display: 'flex',
+          flexDirection: 'column'
+        }
+      }}
+    >
+      <DialogTitle>
+        Agendar Horário Fixo
+      </DialogTitle>
+      <DialogContent 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          p: { xs: 2, sm: 3 },
+          overflow: 'hidden'
+        }}
+      >
+        <Box sx={{ mb: 3, flexShrink: 0 }}>
+          {(!selectedSlot?.esporte || !selectedSlot?.horario_inicio || !selectedSlot?.horario_fim) && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Por favor, selecione um esporte e um horário antes de continuar.
+            </Alert>
+          )}
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box 
+            sx={{ 
+              display: 'flex',
+              gap: 2,
+              overflowX: 'auto',
+              pb: 1,
+              WebkitOverflowScrolling: 'touch',
+              '&::-webkit-scrollbar': {
+                height: '6px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: '#f1f1f1',
+                borderRadius: '3px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#888',
+                borderRadius: '3px',
+                '&:hover': {
+                  background: '#666'
+                }
+              }
+            }}
+          >
+            {[1, 2, 3, 4, 5, 6].map((months) => {
+              const isDisabled = !selectedSlot?.esporte;
+              
+              return (
+                <Button
+                  key={months}
+                  variant={selectedOption === months ? "contained" : "outlined"}
+                  onClick={() => setSelectedOption(months)}
+                  size="small"
+                  disabled={isDisabled}
+                  sx={{ 
+                    borderRadius: '50%',
+                    minWidth: '64px',
+                    height: '64px',
+                    p: 0,
+                    flexDirection: 'column',
+                    lineHeight: 1,
+                    gap: 0
+                  }}
+                >
+                  <Typography 
+                    variant="h6" 
+                    fontWeight="bold"
+                    sx={{ 
+                      lineHeight: 1,
+                      mb: '-2px'
+                    }}
+                  >
+                    {months}
+                  </Typography>
+                  <Typography 
+                    variant="caption"
+                    sx={{ 
+                      fontSize: '0.65rem',
+                      lineHeight: 1,
+                      opacity: 0.8
+                    }}
+                  >
+                    {months === 1 ? 'mês' : 'meses'}
+                  </Typography>
+                </Button>
+              );
+            })}
           </Box>
-        )}
-
-        {(!selectedSlot?.esporte || !selectedSlot?.horario_inicio || !selectedSlot?.horario_fim) && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Por favor, selecione um esporte e um horário antes de continuar.
-          </Alert>
-        )}
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
-          {[1, 2, 3, 4, 5, 6].map((months) => {
-            const isDisabled = !selectedSlot?.esporte;
-            
-            return (
-              <Button
-                key={months}
-                variant={selectedOption === months ? "contained" : "outlined"}
-                onClick={() => setSelectedOption(months)}
-                size="small"
-                disabled={isDisabled}
-                sx={{ 
-                  borderRadius: '50%',
-                  minWidth: '52px',
-                  height: '52px',
-                  p: 0,
-                  flexDirection: 'column',
-                  lineHeight: 1
-                }}
-              >
-                <Typography variant="subtitle1" fontWeight="bold">
-                  {months}
-                </Typography>
-                <Typography variant="caption">
-                  {months === 1 ? 'mês' : 'meses'}
-                </Typography>
-              </Button>
-            );
-          })}
         </Box>
 
-        {loading ? (
-          <LoadingSkeleton />
-        ) : (
-          selectedOption && (
-            <RecurrencePreview
-              selectedSlot={selectedSlot}
-              selectedOption={selectedOption}
-              previewDates={previewDates}
-            />
-          )
-        )}
+        <Box sx={{ 
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden'
+        }}>
+          {loading ? (
+            <LoadingSkeleton />
+          ) : (
+            selectedOption && (
+              <Box sx={{ 
+                height: '100%',
+                overflow: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                '&::-webkit-scrollbar': { width: '6px' },
+                '&::-webkit-scrollbar-track': {
+                  background: '#f1f1f1',
+                  borderRadius: '3px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#888',
+                  borderRadius: '3px',
+                  '&:hover': { background: '#666' }
+                }
+              }}>
+                <RecurrencePreview
+                  selectedSlot={selectedSlot}
+                  selectedOption={selectedOption}
+                  previewDates={previewDates}
+                />
+              </Box>
+            )
+          )}
+        </Box>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ flexShrink: 0 }}>
         <Button onClick={onClose} disabled={loading}>
           Cancelar
         </Button>

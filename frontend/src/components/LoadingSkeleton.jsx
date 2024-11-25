@@ -1,80 +1,75 @@
 import React from 'react';
-import { Box, Stack, Skeleton, Paper } from '@mui/material';
+import { Box, Skeleton, Stack, Grid } from '@mui/material';
+import { keyframes } from '@mui/system';
 
-export const LoadingSkeleton = () => (
-  <Box sx={{ mt: 1 }}>
-    {/* Container de Review */}
-    <Paper sx={{ p: 2, mb: 1, boxShadow: 'none', bgcolor: 'grey.50' }}>
-      <Stack spacing={0.5}>
-        {[...Array(5)].map((_, index) => (
-          <Box key={index} display="flex" justifyContent="space-between">
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const LoadingSkeleton = () => (
+  <Stack spacing={1}>
+    {[...Array(4)].map((_, index) => (
+      <Box
+        key={index}
+        sx={{
+          p: 2,
+          borderRadius: 1,
+          border: '1px solid #f1f1f1',
+          backgroundColor: 'rgba(0, 0, 0, 0.04)',
+          animation: `${fadeInUp} 0.3s ease-out forwards`,
+          animationDelay: `${index * 0.05}s`,
+          opacity: 0,
+        }}
+      >
+        <Grid container spacing={2} alignItems="center">
+          {/* Coluna 1: Data e dia da semana */}
+          <Grid item xs={6}>
             <Skeleton 
-              width={80} 
-              height={24} 
-              animation="wave"
-              sx={{ bgcolor: 'grey.200' }}
-            />
-            <Skeleton 
+              variant="text" 
               width={120} 
-              height={24} 
+              height={24}
               animation="wave"
-              sx={{ bgcolor: 'grey.200' }}
             />
-          </Box>
-        ))}
-      </Stack>
-    </Paper>
+            <Skeleton 
+              variant="text" 
+              width={80} 
+              height={20}
+              animation="wave"
+            />
+          </Grid>
 
-    {/* Alert Skeleton */}
-    <Skeleton 
-      variant="rectangular" 
-      height={48} 
-      animation="wave"
-      sx={{ 
-        mb: 1,
-        borderRadius: 1,
-        bgcolor: 'grey.200'
-      }} 
-    />
-
-    {/* Lista de Horários Skeleton */}
-    <Stack spacing={1}>
-      {[...Array(5)].map((_, index) => (
-        <Paper 
-          key={index}
-          sx={{ 
-            p: 1.5,
-            boxShadow: 'none',
-            border: '1px solid',
-            borderColor: 'divider'
-          }}
-        >
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Box>
+          {/* Coluna 2: Horário e status */}
+          <Grid item xs={6}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              gap: 1
+            }}>
               <Skeleton 
-                width={120} 
-                height={24} 
+                variant="text" 
+                width={100} 
+                height={20}
                 animation="wave"
-                sx={{ bgcolor: 'grey.200' }}
               />
               <Skeleton 
-                width={160} 
-                height={20} 
+                variant="rounded"
+                width={100}
+                height={24}
                 animation="wave"
-                sx={{ bgcolor: 'grey.200' }}
               />
             </Box>
-            <Skeleton 
-              width={80} 
-              height={24} 
-              animation="wave"
-              sx={{ bgcolor: 'grey.200' }}
-            />
-          </Box>
-        </Paper>
-      ))}
-    </Stack>
-  </Box>
+          </Grid>
+        </Grid>
+      </Box>
+    ))}
+  </Stack>
 );
 
 export default LoadingSkeleton; 

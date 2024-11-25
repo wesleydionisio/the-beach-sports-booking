@@ -132,6 +132,7 @@ const BookingPage = () => {
   const [recurrenceModalOpen, setRecurrenceModalOpen] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [selectedRecurrence, setSelectedRecurrence] = useState(null);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const horarioInicio = 8;
   const horarioFim = 22;
@@ -198,7 +199,7 @@ const BookingPage = () => {
   useEffect(() => {
     const fetchTimeSlots = async (selectedDate) => {
       try {
-        setLoading(true);
+        setLoadingSlots(true);
         const formattedDate = selectedDate.format('YYYY-MM-DD');
         
         console.log('1. Buscando slots para data:', formattedDate);
@@ -213,12 +214,6 @@ const BookingPage = () => {
           axios.get('/business-config')
         ]);
 
-        console.log('2. Reservas recebidas:', {
-          data: formattedDate,
-          reservas: reservasResponse.data.reservas,
-          total: reservasResponse.data.reservas?.length
-        });
-
         const config = configResponse.data;
         setBusinessConfig(config);
 
@@ -227,24 +222,19 @@ const BookingPage = () => {
           config
         );
 
-        console.log('3. Slots gerados:', {
-          total: slotsGerados.length,
-          disponiveis: slotsGerados.filter(s => s.disponivel).length,
-          reservados: slotsGerados.filter(s => !s.disponivel).length,
-          slots: slotsGerados
-        });
-
         setTimeSlots(slotsGerados);
-
       } catch (error) {
-        console.error('Erro ao buscar horários:', error);
-        setError('Erro ao carregar horários disponíveis');
+        console.error('Erro ao buscar slots:', error);
+        enqueueSnackbar('Erro ao carregar horários disponíveis', { variant: 'error' });
       } finally {
-        setLoading(false);
+        // Adicionar um pequeno delay para melhor UX
+        setTimeout(() => {
+          setLoadingSlots(false);
+        }, 800);
       }
     };
 
-    if (selectedDate && quadraId) {
+    if (selectedDate) {
       fetchTimeSlots(selectedDate);
     }
   }, [selectedDate, quadraId]);
@@ -782,6 +772,7 @@ const BookingPage = () => {
                           slots={timeSlots}
                           onSlotSelect={handleSlotSelect}
                           selectedSlot={selectedSlot}
+                          loading={loadingSlots}
                         />
                       ) : (
                         <OptionSkeleton title="Horário:" />
