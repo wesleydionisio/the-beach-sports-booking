@@ -11,18 +11,15 @@ const SPORT_ICONS = {
   'Futebol': SportsSoccerIcon,
   'Basquete': SportsBasketballIcon,
   'Vôlei': SportsVolleyballIcon,
-  'Tênis': SportsTennisIcon,
+  'Tênis': SportsTennisIcon,  
   'default': SportsIcon
 };
 
 const SportLabel = ({ icon: CustomIcon, label, sportData }) => {
-  console.log('1. SportLabel recebeu:', { CustomIcon, label, sportData });
-  
   const [customIconUrl, setCustomIconUrl] = useState(null);
 
   const sanitizeSvg = async (url) => {
     try {
-      console.log('2. Tentando sanitizar SVG:', url);
       const response = await fetch(url);
       const svgText = await response.text();
       
@@ -32,10 +29,8 @@ const SportLabel = ({ icon: CustomIcon, label, sportData }) => {
         .replace(/style="[^"]*"/g, '')
         .replace(/<svg/, '<svg fill="white"');
       
-      console.log('3. SVG sanitizado com sucesso');
       return `data:image/svg+xml,${encodeURIComponent(sanitized)}`;
     } catch (error) {
-      console.error('4. Erro ao sanitizar SVG:', error);
       return null;
     }
   };
@@ -44,13 +39,10 @@ const SportLabel = ({ icon: CustomIcon, label, sportData }) => {
     const loadCustomIcon = async () => {
       if (sportData?.icon) {
         try {
-          console.log('5. Tentando carregar ícone:', sportData.icon);
           const iconUrl = require(`../../assets/icons/sports/${sportData.icon}`);
-          console.log('6. URL do ícone:', iconUrl);
           const sanitizedUrl = await sanitizeSvg(iconUrl);
           setCustomIconUrl(sanitizedUrl);
         } catch (error) {
-          console.error('7. Erro ao carregar ícone:', error);
           setCustomIconUrl(null);
         }
       }

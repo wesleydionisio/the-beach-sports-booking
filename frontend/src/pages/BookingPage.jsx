@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Container, 
   Typography, 
@@ -34,6 +34,14 @@ import BookingSummary from '../components/booking/BookingSummary';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import BookingModals from '../components/booking/BookingModals';
 import SportLabel from '../components/common/SportLabel';
+import { format } from 'date-fns'; // Adicionar esta importação
+import { ptBR } from 'date-fns/locale';
+import DateService from '../utils/dateService';
+import RepeatIcon from '@mui/icons-material/Repeat';
+import { useSnackbar } from 'notistack';
+import { AuthContext } from '../context/AuthContext';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import RecurrenceModal from '../components/RecurrenceModal';
 
 const OptionSkeleton = ({ title }) => (
   <Box>
@@ -78,8 +86,11 @@ const confirmButtonStyles = {
 };
 
 const BookingPage = () => {
-  const { quadraId } = useParams();
+  const { user } = useContext(AuthContext);
+  const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { quadraId } = useParams();
   const [court, setCourt] = useState(null);
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -113,164 +124,246 @@ const BookingPage = () => {
     slots: []
   });
   const [showRecurrenceModal, setShowRecurrenceModal] = useState(false);
+  const [slots, setSlots] = useState([]); // Adicionar este estado
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+  const [selectedCourt, setSelectedCourt] = useState(null);
+  const [recurrenceOpen, setRecurrenceOpen] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+  const [recurrenceModalOpen, setRecurrenceModalOpen] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  const [selectedRecurrence, setSelectedRecurrence] = useState(null);
 
   const horarioInicio = 8;
   const horarioFim = 22;
   const duracao = 1;
 
   // Função para gerar slots com valores
-  const generateTimeSlots = (reservas = [], horariosNobres = [], config) => {
+  const generateTimeSlots = (reservas = [], config) => {
     if (!config) return [];
+    
+    console.log('1. Gerando slots com:', {
+      totalReservas: reservas.length,
+      horariosNobres: config.horarios_nobres,
+      reservas: reservas.map(r => ({
+        data: r.data,
+        horario: r.horario_inicio,
+        status: r.status
+      }))
+    });
 
     const slots = [];
     const horarioInicio = parseInt(config.horario_abertura.split(':')[0]);
     const horarioFim = parseInt(config.horario_fechamento.split(':')[0]);
-    const duracao = 1; // 1 hora por slot
+    
+    const dataAtual = dayjs().format('YYYY-MM-DD');
+    const dataSelecionada = selectedDate.format('YYYY-MM-DD');
 
     for (let hora = horarioInicio; hora < horarioFim; hora++) {
-      const horarioInicio = `${String(hora).padStart(2, '0')}:00`;
-      const horarioFim = `${String(hora + duracao).padStart(2, '0')}:00`;
-      const isHorarioNobre = horariosNobres.includes(horarioInicio);
+      const horaInicio = `${String(hora).padStart(2, '0')}:00`;
+      const horaFim = `${String(hora + 1).padStart(2, '0')}:00`;
       
-      // Verificar se o horário está reservado
+      // Verificar reservas existentes
       const isReservado = reservas.some(reserva => 
-        reserva.horario_inicio === horarioInicio && 
-        reserva.horario_fim === horarioFim
+        reserva.data === dataSelecionada && 
+        reserva.horario_inicio === horaInicio && 
+        reserva.status !== 'cancelada'
       );
-      
+
+      const slotDateTime = dayjs(`${dataSelecionada} ${horaInicio}`);
+      const isHorarioNobre = config.horarios_nobres?.includes(horaInicio);
+      const isHorarioPassado = dataSelecionada === dataAtual && 
+        slotDateTime.isBefore(dayjs());
+
+      console.log('2. Verificando horário:', {
+        horario: horaInicio,
+        isHorarioNobre,
+        horariosNobres: config.horarios_nobres
+      });
+
       slots.push({
-        horario_inicio: horarioInicio,
-        horario_fim: horarioFim,
-        disponivel: !isReservado,
+        horario_inicio: horaInicio,
+        horario_fim: horaFim,
+        disponivel: !isReservado && !isHorarioPassado,
         is_horario_nobre: isHorarioNobre,
-        valor: isHorarioNobre ? config.valor_hora_nobre : config.valor_hora_padrao
+        valor: isHorarioNobre ? config.valor_hora_nobre : config.valor_hora_padrao,
+        motivo_bloqueio: isReservado ? 'reservado' : 
+                         isHorarioPassado ? 'horario_passado' : null
       });
     }
 
     return slots;
   };
 
-  // Buscar configurações e gerar slots
+  // Atualizar o useEffect que busca os slots
   useEffect(() => {
-    const fetchTimeSlots = async () => {
+    const fetchTimeSlots = async (selectedDate) => {
       try {
         setLoading(true);
-        const formattedDate = dayjs(selectedDate).format('YYYY-MM-DD');
+        const formattedDate = selectedDate.format('YYYY-MM-DD');
         
-        console.log('Buscando slots para:', {
-          quadra_id: quadraId,
-          data: formattedDate
+        console.log('1. Buscando slots para data:', formattedDate);
+
+        const [reservasResponse, configResponse] = await Promise.all([
+          axios.get('/bookings/check', {
+            params: {
+              quadra_id: quadraId,
+              data: formattedDate
+            }
+          }),
+          axios.get('/business-config')
+        ]);
+
+        console.log('2. Reservas recebidas:', {
+          data: formattedDate,
+          reservas: reservasResponse.data.reservas,
+          total: reservasResponse.data.reservas?.length
         });
 
-        const response = await axios.get('/bookings/check', {
-          params: {
-            quadra_id: quadraId,
-            data: formattedDate
-          }
+        const config = configResponse.data;
+        setBusinessConfig(config);
+
+        const slotsGerados = generateTimeSlots(
+          reservasResponse.data.reservas || [], 
+          config
+        );
+
+        console.log('3. Slots gerados:', {
+          total: slotsGerados.length,
+          disponiveis: slotsGerados.filter(s => s.disponivel).length,
+          reservados: slotsGerados.filter(s => !s.disponivel).length,
+          slots: slotsGerados
         });
 
-        if (response.data.success) {
-          console.log('Slots recebidos:', response.data.slots);
-          setTimeSlots(response.data.slots);
-        } else {
-          console.error('Erro ao buscar slots:', response.data.message);
-          setError(response.data.message);
-        }
+        setTimeSlots(slotsGerados);
+
       } catch (error) {
-        console.error('Erro ao buscar slots:', error);
+        console.error('Erro ao buscar horários:', error);
         setError('Erro ao carregar horários disponíveis');
       } finally {
         setLoading(false);
       }
     };
 
-    if (quadraId && selectedDate) {
-      fetchTimeSlots();
+    if (selectedDate && quadraId) {
+      fetchTimeSlots(selectedDate);
     }
-  }, [quadraId, selectedDate]);
+  }, [selectedDate, quadraId]);
 
   // Atualizar handleSlotSelect
   const handleSlotSelect = (slot) => {
-    if (!slot || !slot.disponivel) return;
-    
-    const slotCompleto = {
+    console.log('Slot selecionado:', {
+      slot,
+      selectedSport,
+      selectedDate
+    });
+
+    setSelectedSlot({
       ...slot,
-      quadra_id: quadraId,
-      data: selectedDate.toISOString()
-    };
+      data: selectedDate,
+      esporte: selectedSport?._id // Garantir que o ID do esporte está sendo incluído
+    });
+  };
+
+  // Atualizar o estado quando um método de pagamento é selecionado
+  const handlePaymentSelect = (payment) => {
+    console.log('Método de pagamento selecionado:', payment);
     
-    console.log('Slot selecionado:', slotCompleto);
-    setSelectedSlot(slotCompleto);
+    // Atualizar ambos os estados
+    setSelectedPayment(payment);
+    setSelectedPaymentMethod({
+      _id: payment,
+      // outros campos necessários
+    });
   };
 
   // Atualizar handleConfirmReservation para salvar todos os dados necessários
   const handleConfirmReservation = async () => {
     try {
-      setState(prev => ({ ...prev, loading: true }));
-      
-      const payload = {
-        quadra_id: selectedSlot.quadra_id,
-        data: selectedSlot.data,
-        horario_inicio: selectedSlot.horario_inicio,
-        horario_fim: selectedSlot.horario_fim,
-        esporte_id: selectedSport,
-        metodo_pagamento_id: selectedPayment,
-        total: selectedSlot.valor,
-        pague_no_local: selectedPayment === 'dinheiro',
-        is_recorrente: state.recorrencia?.is_recorrente || false
-      };
-
-      if (state.recorrencia?.is_recorrente) {
-        console.log('BookingPage - Estado da recorrência:', state.recorrencia);
-        payload.recorrencia = {
-          duracao_meses: state.recorrencia.duracao_meses,
-          dia_semana: state.recorrencia.dia_semana
-        };
-      }
-
-      console.log('BookingPage - Payload final:', payload);
-      const response = await axios.post('/bookings', payload);
-      
-      // Verificar a estrutura da resposta e extrair o ID da reserva
-      let reservaId;
-      if (response.data.data) {
-        // Se a resposta tem data.data
-        reservaId = response.data.data._id || 
-                   response.data.data.reserva_pai?._id || 
-                   response.data.data.id;
-      } else if (response.data.booking) {
-        // Se a resposta tem data.booking
-        reservaId = response.data.booking._id || 
-                   response.data.booking.id;
-      } else if (response.data._id) {
-        // Se a resposta tem o ID diretamente
-        reservaId = response.data._id;
-      }
-
-      if (!reservaId) {
-        throw new Error('ID da reserva não encontrado na resposta');
-      }
-
-      // Log da resposta e do ID extraído
-      console.log('Resposta do servidor:', response.data);
-      console.log('ID da reserva extraído:', reservaId);
-
-      // Navegar para a página de revisão da reserva
-      navigate(`/reserva/${reservaId}`);
-
-    } catch (error) {
-      console.error('Erro completo:', error);
-      console.error('Resposta do servidor:', error.response?.data);
-      
-      setState(prev => ({
-        ...prev,
-        error: {
-          message: 'Erro ao criar reserva',
-          details: error.response?.data?.message || error.message
+      console.log('DEBUG - Estado completo antes da confirmação:', {
+        selectedTimeSlot,
+        selectedSlot,
+        selectedCourt,
+        selectedDate: selectedDate?.format('YYYY-MM-DD'),
+        selectedSport,
+        selectedPayment,
+        horarios: {
+          inicio: selectedTimeSlot?.horario_inicio || selectedSlot?.horario_inicio,
+          fim: selectedTimeSlot?.horario_fim || selectedSlot?.horario_fim
         }
-      }));
-    } finally {
-      setState(prev => ({ ...prev, loading: false }));
+      });
+
+      // Validações
+      if (!selectedTimeSlot && !selectedSlot) {
+        console.error('Nenhum horário selecionado');
+        alert('Por favor, selecione um horário');
+        return;
+      }
+
+      const slotToUse = selectedTimeSlot || selectedSlot;
+
+      if (!selectedCourt?._id) {
+        alert('Por favor, selecione uma quadra');
+        return;
+      }
+
+      if (!selectedDate) {
+        alert('Por favor, selecione uma data');
+        return;
+      }
+
+      if (!slotToUse?.horario_inicio || !slotToUse?.horario_fim) {
+        alert('Por favor, selecione um horário válido');
+        return;
+      }
+
+      if (!selectedSport) {
+        alert('Por favor, selecione um esporte');
+        return;
+      }
+
+      if (!selectedPaymentMethod?._id) {
+        alert('Por favor, selecione um método de pagamento');
+        return;
+      }
+
+      if (selectedRecurrence) {
+        // Se houver recorrência selecionada, usar a rota de recorrência
+        const recurrenceData = {
+          quadraId: selectedCourt._id,
+          esporte: selectedSport._id,
+          horarioInicio: slotToUse.horario_inicio,
+          horarioFim: slotToUse.horario_fim,
+          datasConfirmadas: selectedRecurrence.dates,
+          valor: slotToUse.valor,
+          metodo_pagamento: selectedPaymentMethod._id
+        };
+
+        const response = await axios.post('/bookings/recorrencia/confirmar', recurrenceData);
+        
+        if (response.data?.success) {
+          navigate(`/reserva/${response.data.agendamentos[0]._id}`);
+        }
+      } else {
+        // Se não houver recorrência, usar a rota normal de reserva
+        const bookingData = {
+          quadra_id: selectedCourt._id,
+          data: selectedDate.format('YYYY-MM-DD'),
+          horario_inicio: slotToUse.horario_inicio,
+          horario_fim: slotToUse.horario_fim,
+          esporte: selectedSport._id,
+          metodo_pagamento: selectedPaymentMethod._id,
+          total: slotToUse.valor || 0
+        };
+
+        const response = await axios.post('/bookings', bookingData);
+        
+        if (response.data?.success) {
+          navigate(`/reserva/${response.data.booking._id}`);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao criar reserva:', error);
+      alert('Erro ao criar reserva. Por favor, verifique os dados.');
     }
   };
   
@@ -366,38 +459,82 @@ const BookingPage = () => {
     return valorBase;
   };
 
+  const handleTimeSlotSelect = (slot) => {
+    console.log('Horário selecionado:', slot);
+    setSelectedTimeSlot(slot);
+    setSelectedSlot(prev => ({
+      ...prev,
+      horario_inicio: slot.horario_inicio,
+      horario_fim: slot.horario_fim,
+      valor: slot.valor,
+      is_horario_nobre: slot.is_horario_nobre
+    }));
+  };
+
+  const calculateTotal = () => {
+    if (!selectedTimeSlot) return 0;
+    
+    const horaInicio = parseInt(selectedTimeSlot.horario_inicio.split(':')[0]);
+    const horaFim = parseInt(selectedTimeSlot.horario_fim.split(':')[0]);
+    const duracaoHoras = horaFim - horaInicio;
+    
+    // Verificar se é horário nobre (18h às 22h)
+    const isHorarioNobre = horaInicio >= 18 && horaInicio < 22;
+    const valorHora = isHorarioNobre ? 150 : 120; // Valores padrão ou buscar da configuração
+    
+    return valorHora * duracaoHoras;
+  };
+
   useEffect(() => {
-    // Verificar se o servidor está respondendo
-    const checkServerHealth = async () => {
+    const fetchCourt = async () => {
       try {
-        await axios.get('/health');
-        console.log('Servidor está respondendo');
+        const response = await axios.get(`/courts/${quadraId}`);
+        setSelectedCourt(response.data);
+        setCourt(response.data);
       } catch (error) {
-        console.error('Servidor não está respondendo:', error);
-        setError('Não foi possível conectar ao servidor. Por favor, tente novamente mais tarde.');
+        console.error('Erro ao buscar dados da quadra:', error);
+        enqueueSnackbar('Erro ao carregar dados da quadra', { variant: 'error' });
       }
     };
 
-    checkServerHealth();
-  }, []);
-
-  // Adicione um useEffect para monitorar mudanças no estado da recorrência
-  useEffect(() => {
-    if (state.recorrencia) {
-      console.log('BookingPage - Recorrência atualizada:', state.recorrencia);
+    if (quadraId) {
+      fetchCourt();
     }
-  }, [state.recorrencia]);
+  }, [quadraId]);
 
-  const handleRecorrenciaConfirm = (recorrencia) => {
-    console.log('BookingPage - Recebendo recorrência:', recorrencia);
-    setState(prev => ({
-      ...prev,
-      recorrencia: {
-        ...recorrencia,
-        duracao_meses: Number(recorrencia.duracao_meses)
-      }
-    }));
-  };
+  // Adicionar um useEffect para atualizar o selectedSlot quando o esporte for selecionado
+  useEffect(() => {
+    if (selectedTimeSlot && selectedSport) {
+      setSelectedSlot(prev => ({
+        ...prev,
+        ...selectedTimeSlot,
+        esporte: selectedSport._id,
+        esporteObj: selectedSport
+      }));
+    }
+  }, [selectedSport, selectedTimeSlot]);
+
+  // Adicionar este useEffect
+  useEffect(() => {
+    if (selectedTimeSlot) {
+      setSelectedSlot(prev => ({
+        ...prev,
+        horario_inicio: selectedTimeSlot.horario_inicio,
+        horario_fim: selectedTimeSlot.horario_fim,
+        valor: selectedTimeSlot.valor
+      }));
+    }
+  }, [selectedTimeSlot]);
+
+  // Primeiro, adicione um log para debug
+  useEffect(() => {
+
+  }, [selectedSport, selectedTimeSlot]);
+
+  // Primeiro, adicione um log para debug dos estados
+  useEffect(() => {
+
+  }, [selectedSport, selectedTimeSlot, selectedSlot]);
 
   return (
     <>
@@ -643,8 +780,8 @@ const BookingPage = () => {
                       {selectedDate ? (
                         <TimeSlots 
                           slots={timeSlots}
-                          selectedSlot={selectedSlot}
                           onSlotSelect={handleSlotSelect}
+                          selectedSlot={selectedSlot}
                         />
                       ) : (
                         <OptionSkeleton title="Horário:" />
@@ -727,7 +864,7 @@ const BookingPage = () => {
                     onEdit={() => setBookingStep(1)}
                   />
                   
-                  {/* Seleção de Esporte e Pagamento */}
+                  {/* Seleão de Esporte e Pagamento */}
                   <Grid 
                     container 
                     spacing={3} 
@@ -760,24 +897,50 @@ const BookingPage = () => {
                         </Typography>
                         <PaymentButtons
                           selectedPayment={selectedPayment}
-                          onPaymentSelect={setSelectedPayment}
+                          onPaymentSelect={handlePaymentSelect}
                         />
                       </Box>
                     </Grid>
                   </Grid>
 
-                  {/* Opções Adicionais sem margem superior */}
-                  <Box sx={{ mt: 0 }}>
-                    <Typography variant="h6" sx={{ mb: 1, fontWeight: 550 }}>
-                      Opções adicionais:
-                    </Typography>
-                    <BookingModals
-                      selectedSlot={selectedSlot}
-                      onRecurrenceConfirm={handleRecorrenciaConfirm}
+                  {/* Botão de Confirmar Reserva */}
+                  <Box sx={{ mt: 2 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setRecurrenceModalOpen(true)}
+                      startIcon={<AccessTimeIcon />}
+                      sx={{
+                        height: 40,
+                        textTransform: 'none',
+                        fontSize: '1rem'
+                      }}
+                    >
+                      Agendar Horário Fixo
+                    </Button>
+
+                    <RecurrenceModal
+                      open={recurrenceModalOpen}
+                      onClose={() => setRecurrenceModalOpen(false)}
+                      selectedSlot={{
+                        data: selectedDate,
+                        esporte: selectedSport?._id,
+                        horario_inicio: selectedTimeSlot?.horario_inicio || selectedSlot?.horario_inicio,
+                        horario_fim: selectedTimeSlot?.horario_fim || selectedSlot?.horario_fim,
+                        valor: selectedTimeSlot?.valor || selectedSlot?.valor || 0,
+                        disponivel: true,
+                        is_horario_nobre: selectedTimeSlot?.is_horario_nobre || false
+                      }}
+                      quadraId={quadraId}
+                      disabled={!selectedTimeSlot || !selectedSport}
+                      selectedPayment={selectedPaymentMethod?._id}
+                      onConfirm={(recurrenceData) => {
+                        console.log('Opção de recorrência selecionada:', recurrenceData);
+                        setSelectedRecurrence(recurrenceData);
+                        setRecurrenceModalOpen(false);
+                      }}
                     />
                   </Box>
 
-                  {/* Botão de Confirmar Reserva */}
                   <Box>
                     <Button
                       variant="contained"

@@ -9,6 +9,12 @@ const BusinessConfigSchema = new mongoose.Schema({
   valor_hora_padrao: { type: Number, required: true, default: 120 },
   valor_hora_nobre: { type: Number, required: true, default: 150 },
   percentual_hora_nobre: { type: Number, required: true, default: 25 }, // 25% a mais
+  min_time_before_booking: { 
+    type: Number, 
+    required: true, 
+    default: 60 // 60 minutos (1 hora)
+  },
+  horarios_nobres: [String]
 }, { timestamps: true });
 
 module.exports = mongoose.model('BusinessConfig', BusinessConfigSchema);

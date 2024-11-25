@@ -2,13 +2,10 @@ import React from 'react';
 import { Box, Typography, Divider, Button, Chip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import RepeatIcon from '@mui/icons-material/Repeat';
-import dayjs from 'dayjs';
-import 'dayjs/locale/pt-br';
+import DateService from '../../utils/dateService';
 
 const BookingSummary = ({ selectedDate, selectedSlot, court, onEdit, recorrencia }) => {
-  const formattedDate = dayjs(selectedDate)
-    .locale('pt-br')
-    .format('dddd, DD [de] MMMM [de] YYYY');
+  const formattedDate = DateService.formatDisplay(selectedDate);
   const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
 
   const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -26,7 +23,10 @@ const BookingSummary = ({ selectedDate, selectedSlot, court, onEdit, recorrencia
           Horário
         </Typography>
         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-          {selectedSlot.horario_inicio}h às {selectedSlot.horario_fim}h
+          {DateService.formatTimeInterval(
+            selectedSlot?.horario_inicio,
+            selectedSlot?.horario_fim
+          )}
         </Typography>
       </Box>
       

@@ -12,51 +12,22 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
+const DateService = require('../utils/dateService');
+const RecurrenceService = require('../services/RecurrenceService');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
 
-// Função auxiliar para gerar datas recorrentes
-const gerarDatasRecorrentes = (dataInicial, duracaoMeses, diaSemana) => {
-  console.log('Gerando datas recorrentes:', {
-    dataInicial,
-    duracaoMeses,
-    diaSemana
-  });
-
-  const datas = [];
-  const dataInicio = new Date(dataInicial);
-  const dataFim = new Date(dataInicial);
-  dataFim.setMonth(dataFim.getMonth() + parseInt(duracaoMeses));
-
-  // Ajustar para o primeiro dia do mês seguinte
-  dataFim.setDate(1);
-  dataFim.setMonth(dataFim.getMonth() + 1);
-  dataFim.setDate(dataFim.getDate() - 1);
-
-  let dataAtual = new Date(dataInicio);
-  
-  while (dataAtual <= dataFim) {
-    if (dataAtual.getDay() === parseInt(diaSemana)) {
-      datas.push(new Date(dataAtual));
-    }
-    // Avançar um dia
-    dataAtual.setDate(dataAtual.getDate() + 1);
-  }
-
-  console.log(`Geradas ${datas.length} datas para recorrência:`, 
-    datas.map(d => ({
-      data: d.toISOString(),
-      dia_semana: d.getDay()
-    }))
-  );
-
-  return datas;
-};
-
 // Função auxiliar para verificar disponibilidade
 const verificarDisponibilidade = async (quadra_id, data, horario_inicio, horario_fim) => {
+  console.log('Verificando disponibilidade:', {
+    quadra_id,
+    data: new Date(data).toLocaleDateString(),
+    horario_inicio,
+    horario_fim
+  });
+
   const reservaExistente = await Booking.findOne({
     quadra_id,
     data: {
@@ -67,6 +38,14 @@ const verificarDisponibilidade = async (quadra_id, data, horario_inicio, horario
     horario_fim,
     status: { $ne: 'cancelada' }
   }).populate('usuario_id', 'nome');
+
+  if (reservaExistente) {
+    console.log('Reserva existente encontrada:', {
+      usuario: reservaExistente.usuario_id?.nome,
+      data: new Date(reservaExistente.data).toLocaleDateString(),
+      horario: `${reservaExistente.horario_inicio} - ${reservaExistente.horario_fim}`
+    });
+  }
 
   return {
     disponivel: !reservaExistente,
@@ -116,210 +95,67 @@ const calcularHorariosNobres = async (quadraId, dataReferencia) => {
 // Função para criar uma reserva
 exports.createBooking = async (req, res) => {
   try {
-    console.log('Controller - Dados recebidos:', req.body);
+    console.log('1. Dados recebidos para criação:', req.body);
     
     const {
       quadra_id,
       data,
       horario_inicio,
       horario_fim,
-      esporte_id,
-      metodo_pagamento_id,
-      total,
-      pague_no_local,
-      is_recorrente,
-      recorrencia
+      esporte,
+      metodo_pagamento,
+      total
     } = req.body;
 
-    if (is_recorrente && recorrencia) {
-      console.log('Controller - Dados da recorrência:', {
-        duracao_meses: recorrencia.duracao_meses,
-        tipo: typeof recorrencia.duracao_meses
-      });
-      
-      const duracaoMeses = Number(recorrencia.duracao_meses);
-      console.log('Controller - Duração em meses convertida:', duracaoMeses);
-
-      const dataInicio = new Date(data);
-      const dataFim = new Date(data);
-      dataFim.setMonth(dataFim.getMonth() + duracaoMeses);
-
-      const datas = gerarDatasRecorrentes(
-        dataInicio,
-        duracaoMeses,
-        recorrencia.dia_semana
-      );
-
-      console.log('Controller - Datas geradas:', {
-        quantidade: datas.length,
-        duracaoMeses,
-        primeira: datas[0],
-        ultima: datas[datas.length - 1]
-      });
-
-      // Criar a reserva principal (pai)
-      const reservaPai = new Booking({
-        usuario_id: req.user._id,
-        quadra_id,
-        data: dataInicio,
-        horario_inicio,
-        horario_fim,
-        esporte: esporte_id,
-        metodo_pagamento: metodo_pagamento_id,
-        total,
-        pague_no_local,
-        is_recorrente: true,
-        recorrencia: {
-          duracao_meses: duracaoMeses,
-          dia_semana: recorrencia.dia_semana,
-          data_inicio: dataInicio,
-          data_fim: dataFim,
-          horarios: datas.map(data => ({
-            data,
-            horario_inicio,
-            horario_fim,
-            valor: total
-          }))
-        }
-      });
-
-      const reservaPaiSalva = await reservaPai.save();
-      console.log('Reserva pai salva:', reservaPaiSalva);
-
-      // Criar as reservas filhas
-      const reservasFilhas = await Promise.all(datas.slice(1).map(async (dataRecorrencia) => {
-        const reservaFilha = new Booking({
-          usuario_id: req.user._id,
-          quadra_id,
-          data: dataRecorrencia,
-          horario_inicio,
-          horario_fim,
-          esporte: esporte_id,
-          metodo_pagamento: metodo_pagamento_id,
-          status: 'pendente',
-          total: req.body.total,
-          pague_no_local: req.body.pague_no_local || false,
-          is_recorrente: true,
-          recorrencia_pai_id: reservaPaiSalva._id,
-          recorrencia: {
-            duracao_meses: recorrencia.duracao_meses,
-            dia_semana: recorrencia.dia_semana,
-            data_inicio: dataInicio,
-            data_fim: dataFim
-          }
-        });
-
-        return reservaFilha.save();
-      }));
-
-      return res.status(201).json({
-        success: true,
-        message: 'Reservas recorrentes criadas com sucesso',
-        data: {
-          reserva_pai: reservaPaiSalva,
-          reservas_filhas: reservasFilhas,
-          total_reservas: reservasFilhas.length + 1
-        }
+    // Validar total
+    if (!total || total <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'O valor total é obrigatório e deve ser maior que zero'
       });
     }
 
-    // Verificar se já existe uma reserva para este horário
-    const dataInicio = new Date(data);
-    dataInicio.setHours(0, 0, 0, 0);
+    // Converter a data para UTC
+    const bookingDate = DateService.parseToUTC(data);
     
-    const dataFim = new Date(data);
-    dataFim.setHours(23, 59, 59, 999);
-
-    const reservaExistente = await Booking.findOne({
+    console.log('2. Dados processados:', {
       quadra_id,
-      data: {
-        $gte: dataInicio,
-        $lte: dataFim
-      },
+      data: bookingDate,
       horario_inicio,
       horario_fim,
-      status: { $ne: 'cancelada' } // Não considerar reservas canceladas
+      esporte,
+      metodo_pagamento,
+      total
     });
 
-    if (reservaExistente) {
-      return res.status(409).json({
-        success: false,
-        message: 'Este horário já está reservado para esta data.',
-        conflito: {
-          data: reservaExistente.data,
-          horario: `${reservaExistente.horario_inicio} - ${reservaExistente.horario_fim}`
-        }
-      });
-    }
-
-    // Validar se a quadra existe
-    const quadra = await Court.findById(quadra_id);
-    if (!quadra) {
-      return res.status(404).json({
-        success: false,
-        message: 'Quadra não encontrada'
-      });
-    }
-
-    // Buscar configurações de negócio para valores
-    const businessConfig = await BusinessConfig.findOne();
-    if (!businessConfig) {
-      return res.status(500).json({
-        success: false,
-        message: 'Configurações de negócio não encontradas'
-      });
-    }
-
-    // Verificar disponibilidade
-    const horario = parseInt(horario_inicio.split(':')[0]);
-    const isHorarioNobre = horario >= 18 && horario < 22;
-    const valor = isHorarioNobre ? businessConfig.valor_hora_nobre : businessConfig.valor_hora_padrao;
-
-    // Criar a reserva base
-    const novaReserva = new Booking({
-      usuario_id: req.user._id,
+    const booking = new Booking({
+      usuario_id: req.user.id,
       quadra_id,
-      data: new Date(data),
+      data: bookingDate,
       horario_inicio,
       horario_fim,
-      esporte: esporte_id,
-      metodo_pagamento: metodo_pagamento_id,
-      total: valor,
-      is_recorrente: !!is_recorrente,
-      status: 'pendente'
+      esporte,
+      metodo_pagamento,
+      total
     });
 
-    // Se for recorrente, adicionar dados de recorrência
-    if (is_recorrente && recorrencia) {
-      novaReserva.recorrencia = {
-        duracao_meses: recorrencia.duracao_meses,
-        dia_semana: new Date(data).getDay(),
-        data_inicio: new Date(data),
-        data_fim: new Date(recorrencia.data_fim),
-        horarios: recorrencia.horarios
-      };
-    }
+    await booking.save();
+    
+    console.log('3. Reserva criada com sucesso:', booking);
 
-    console.log('Nova reserva a ser criada:', novaReserva);
-
-    await novaReserva.save();
-
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       message: 'Reserva criada com sucesso',
-      data: {
-        _id: novaReserva._id,
-        // ... outros dados da reserva ...
-      }
+      booking
     });
 
   } catch (error) {
-    console.error('Erro ao criar reserva:', error);
-    return res.status(500).json({
+    console.error('4. Erro ao criar reserva:', error);
+    res.status(500).json({
       success: false,
       message: 'Erro ao criar reserva',
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: error.errors // Adicionar detalhes do erro de validação
     });
   }
 };
@@ -406,7 +242,7 @@ exports.getReservedTimes = async (req, res) => {
     }));
 
     console.log('Horários reservados formatados:', horariosReservados);
-    console.log('Horários nobres:', horariosNobres);
+    console.log('Horrios nobres:', horariosNobres);
 
     res.status(200).json({ 
       horariosReservados,
@@ -433,7 +269,7 @@ exports.getBookingById = async (req, res) => {
   console.log('Buscando reserva com ID:', id);
   
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    console.log('ID inválido:', id);
+    console.log('ID invlido:', id);
     return res.status(400).json({ success: false, message: 'ID inválido.' });
   }
 
@@ -514,81 +350,46 @@ exports.getUserBookings = async (req, res) => {
   }
 };
 
-exports.checkRecorrencia = async (req, res) => {
-  try {
-    const { quadra_id, data, horario_inicio, horario_fim } = req.body;
-
-    // Validação dos dados de entrada
-    if (!quadra_id || !data || !horario_inicio || !horario_fim) {
-      return res.status(400).json({
-        success: false,
-        message: 'Dados incompletos para verificação',
-        required: ['quadra_id', 'data', 'horario_inicio', 'horario_fim']
-      });
-    }
-
-    // Verificar se existe conflito para este horário
-    const conflito = await BookingService.verificarConflitos(
-      quadra_id,
-      data,
-      horario_inicio,
-      horario_fim
-    );
-
-    return res.status(200).json({
-      success: true,
-      disponivel: !conflito,
-      data: data,
-      horario: {
-        inicio: horario_inicio,
-        fim: horario_fim
-      }
-    });
-
-  } catch (error) {
-    console.error('Erro ao verificar recorrência:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Erro ao verificar disponibilidade do horário',
-      error: error.message
-    });
-  }
-};
-
 exports.checkAvailability = async (req, res) => {
   try {
-    const { quadra_id, data } = req.query;
+    const { quadra_id, data, horario_inicio, horario_fim } = req.query;
     
-    if (!quadra_id || !data) {
-      return res.status(400).json({
-        success: false,
-        message: 'Quadra ID e data são obrigatórios'
-      });
-    }
-
-    // Buscar configurações de negócio
-    const businessConfig = await BusinessConfig.findOne();
-    if (!businessConfig) {
-      return res.status(404).json({
-        success: false,
-        message: 'Configurações de negócio não encontradas'
-      });
-    }
-
-    // Gerar slots de horário
-    const horariosNobres = await calcularHorariosNobres(quadra_id, new Date(data));
-    const slots = await generateTimeSlots(
+    console.log('Verificando disponibilidade:', {
       quadra_id,
-      new Date(data),
-      businessConfig.horario_abertura,
-      businessConfig.horario_fechamento,
-      horariosNobres
-    );
-
-    res.status(200).json({
-      success: true,
-      slots: slots
+      data: new Date(data).toLocaleDateString(),
+      horario_inicio,
+      horario_fim
     });
+
+    // Converter a data para o início e fim do dia
+    const dataObj = new Date(data);
+    const dataInicio = new Date(dataObj.setHours(0, 0, 0, 0));
+    const dataFim = new Date(dataObj.setHours(23, 59, 59, 999));
+
+    // Buscar reservas existentes
+    const reservaExistente = await Booking.findOne({
+      quadra_id,
+      data: {
+        $gte: dataInicio,
+        $lte: dataFim
+      },
+      horario_inicio,
+      horario_fim,
+      status: { $ne: 'cancelada' }
+    }).populate('usuario_id', 'nome');
+
+    const resultado = {
+      disponivel: !reservaExistente,
+      conflito: reservaExistente ? {
+        id: reservaExistente._id,
+        usuario: reservaExistente.usuario_id?.nome,
+        horario: `${reservaExistente.horario_inicio} - ${reservaExistente.horario_fim}`
+      } : null
+    };
+
+    console.log('Resultado da verificação:', resultado);
+
+    res.json(resultado);
 
   } catch (error) {
     console.error('Erro ao verificar disponibilidade:', error);
@@ -637,34 +438,25 @@ exports.checkTimeSlots = async (req, res) => {
   try {
     const { quadra_id, data } = req.query;
     
-    console.log('1. Iniciando checkTimeSlots:', { quadra_id, data });
+    console.log('1. Verificando slots para:', { quadra_id, data });
 
-    // Buscar a quadra e as configurações de negócio em paralelo
-    const [quadra, businessConfig] = await Promise.all([
-      Court.findById(quadra_id),
-      BusinessConfig.findOne()
-    ]);
-
-    if (!quadra) {
-      return res.status(404).json({
-        success: false,
-        message: 'Quadra não encontrada'
-      });
+    const config = await BusinessConfig.findOne();
+    if (!config) {
+      throw new Error('Configurações do negócio não encontradas');
     }
 
-    if (!businessConfig) {
-      return res.status(500).json({
-        success: false,
-        message: 'Configurações de negócio não encontradas'
-      });
-    }
+    // Usar o DateService para obter os limites do dia
+    const { dataInicio, dataFim } = DateService.getDayBoundaries(data);
 
-    // Buscar agendamentos do dia
-    const dataInicio = dayjs(data).startOf('day').toDate();
-    const dataFim = dayjs(data).endOf('day').toDate();
+    console.log('2. Período de busca:', {
+      dataOriginal: data,
+      inicio: dayjs(dataInicio).format('YYYY-MM-DD HH:mm:ss'),
+      fim: dayjs(dataFim).format('YYYY-MM-DD HH:mm:ss')
+    });
 
-    const agendamentos = await Booking.find({
-      quadra_id, // Corrigido de quadra para quadra_id
+    // Buscar reservas usando os limites corretos
+    const reservas = await Booking.find({
+      quadra_id,
       data: {
         $gte: dataInicio,
         $lte: dataFim
@@ -672,41 +464,24 @@ exports.checkTimeSlots = async (req, res) => {
       status: { $ne: 'cancelada' }
     });
 
-    console.log('3. Agendamentos encontrados:', agendamentos.length);
+    console.log('3. Reservas encontradas:', reservas.map(r => ({
+      id: r._id,
+      data: DateService.formatToLocal(r.data),
+      horario: `${r.horario_inicio}-${r.horario_fim}`,
+      status: r.status
+    })));
 
-    // Gerar slots usando horário do BusinessConfig
-    const slots = BookingService.checkAvailability(
-      {
-        inicio: businessConfig.horario_abertura,
-        fim: businessConfig.horario_fechamento
-      },
-      agendamentos,
-      data,
-      {
-        valor_hora_padrao: businessConfig.valor_hora_padrao,
-        valor_hora_nobre: businessConfig.valor_hora_nobre,
-        percentual_hora_nobre: businessConfig.percentual_hora_nobre
-      }
-    );
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      slots,
-      metadata: {
-        quadra_id,
-        quadra_nome: quadra.nome,
-        data: dayjs(data).format('YYYY-MM-DD'),
-        total_slots: slots.length,
-        horario_funcionamento: {
-          inicio: businessConfig.horario_abertura,
-          fim: businessConfig.horario_fechamento
-        }
-      }
+      reservas: reservas.map(r => ({
+        ...r.toObject(),
+        data: DateService.formatToLocal(r.data)
+      }))
     });
 
   } catch (error) {
-    console.error('Erro ao verificar slots:', error);
-    return res.status(500).json({
+    console.error('ERRO em checkTimeSlots:', error);
+    res.status(500).json({
       success: false,
       message: 'Erro ao verificar slots de horário',
       error: error.message
@@ -716,15 +491,15 @@ exports.checkTimeSlots = async (req, res) => {
 
 exports.getBooking = async (req, res) => {
   try {
-    console.log('1. ID da reserva:', req.params.id);
+    console.log('1. ID da reserva recebido:', req.params.id);
 
+    // Buscar a reserva com todas as referências necessárias
     const booking = await Booking.findById(req.params.id)
-      .populate('usuario_id', 'nome email telefone') // Garantir que o populate está correto
-      .populate('quadra_id')
-      .populate('esporte_id');
+      .populate('quadra_id')  // Popular toda a quadra
+      .populate('esporte')    // Popular todo o esporte
+      .lean();  // Converter para objeto JavaScript puro
 
-    console.log('2. Reserva encontrada:', booking);
-    console.log('3. Dados do usuário:', booking.usuario_id); // Verificar se o usuário está sendo populado
+    console.log('2. Reserva encontrada (raw):', booking);
 
     if (!booking) {
       return res.status(404).json({
@@ -733,26 +508,33 @@ exports.getBooking = async (req, res) => {
       });
     }
 
-    // Formatar os dados da reserva
-    const formattedBooking = {
-      ...booking.toObject(),
-      cliente_nome: booking.usuario_id?.nome,
-      cliente_email: booking.usuario_id?.email,
-      cliente_telefone: booking.usuario_id?.telefone
+    // Formatar os dados para o frontend
+    const formattedReservation = {
+      ...booking,
+      quadra: {
+        id: booking.quadra_id?._id,
+        nome: booking.quadra_id?.nome,
+        imagem_url: booking.quadra_id?.imagem_url
+      },
+      esporte: {
+        id: booking.esporte?._id,
+        nome: booking.esporte?.nome,
+        icon: booking.esporte?.icon
+      }
     };
 
-    console.log('4. Dados formatados:', {
-      usuario_id: booking.usuario_id,
-      cliente_nome: formattedBooking.cliente_nome
+    console.log('3. Dados formatados:', {
+      quadra: formattedReservation.quadra,
+      esporte: formattedReservation.esporte
     });
 
     res.status(200).json({
       success: true,
-      reservation: formattedBooking
+      reservation: formattedReservation
     });
 
   } catch (error) {
-    console.error('Erro ao buscar reserva:', error);
+    console.error('ERRO ao buscar reserva:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao buscar reserva',
@@ -796,6 +578,122 @@ exports.updateBooking = async (req, res) => {
       success: false,
       message: 'Erro ao atualizar reserva',
       error: error.message
+    });
+  }
+};
+
+exports.previewRecorrencia = async (req, res) => {
+  try {
+    console.log('Recebendo requisição de preview:', req.body);
+    const {
+      dataBase,
+      duracaoDias,
+      tipoRecorrencia,
+      diasSemana,
+      quadraId,
+      horarioInicio,
+      horarioFim,
+      esporte
+    } = req.body;
+
+    // Validações detalhadas
+    const camposFaltantes = [];
+    if (!dataBase) camposFaltantes.push('dataBase');
+    if (!quadraId) camposFaltantes.push('quadraId');
+    if (!horarioInicio) camposFaltantes.push('horarioInicio');
+    if (!horarioFim) camposFaltantes.push('horarioFim');
+    if (!esporte) camposFaltantes.push('esporte');
+
+    if (camposFaltantes.length > 0) {
+      throw new Error(`Dados incompletos para gerar preview. Campos faltantes: ${camposFaltantes.join(', ')}`);
+    }
+
+    const preview = await RecurrenceService.generatePreview({
+      dataBase,
+      duracaoDias,
+      tipoRecorrencia,
+      diasSemana,
+      quadraId,
+      horarioInicio,
+      horarioFim,
+      esporte
+    });
+
+    res.json({
+      success: true,
+      preview
+    });
+  } catch (error) {
+    console.error('Erro ao gerar preview:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+exports.confirmarRecorrencia = async (req, res) => {
+  try {
+    console.log('Recebendo dados para confirmação:', req.body);
+    
+    const { 
+      quadraId, 
+      esporte, 
+      horarioInicio, 
+      horarioFim, 
+      datasConfirmadas,
+      valor,
+      metodo_pagamento
+    } = req.body;
+
+    // Validações
+    if (!quadraId || !esporte || !horarioInicio || !horarioFim || !datasConfirmadas || !metodo_pagamento) {
+      console.error('Dados incompletos:', { 
+        quadraId, 
+        esporte, 
+        horarioInicio, 
+        horarioFim, 
+        datasConfirmadas,
+        metodo_pagamento 
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Dados incompletos para criar as reservas recorrentes'
+      });
+    }
+
+    // Criar as reservas
+    const agendamentos = await Promise.all(
+      datasConfirmadas.map(async (data) => {
+        const novaReserva = new Booking({
+          usuario_id: req.user.id,
+          quadra_id: quadraId,
+          esporte: esporte,
+          data: new Date(data.data),
+          horario_inicio: horarioInicio,
+          horario_fim: horarioFim,
+          valor: valor,
+          total: valor,
+          metodo_pagamento: metodo_pagamento,
+          status: 'confirmada'
+        });
+
+        return await novaReserva.save();
+      })
+    );
+
+    console.log('Agendamentos criados:', agendamentos);
+
+    res.json({
+      success: true,
+      message: 'Agendamentos recorrentes criados com sucesso',
+      agendamentos
+    });
+  } catch (error) {
+    console.error('Erro ao criar agendamentos recorrentes:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Erro ao criar agendamentos recorrentes'
     });
   }
 };

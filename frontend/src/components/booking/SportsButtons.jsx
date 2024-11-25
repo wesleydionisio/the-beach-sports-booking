@@ -93,6 +93,11 @@ const SportsButtons = ({ onSportSelect, selectedSport }) => {
     return <IconComponent />;
   };
 
+  const handleSportSelect = (sport) => {
+    console.log('Esporte selecionado:', sport);
+    onSportSelect(sport);
+  };
+
   return (
     <Box>
       <Box sx={{ 
@@ -105,7 +110,7 @@ const SportsButtons = ({ onSportSelect, selectedSport }) => {
           <CircularProgress />
         ) : (
           sports.map((sport) => {
-            const isSelected = selectedSport === sport._id;
+            const isSelected = selectedSport?._id === sport._id;
             
             const iconBox = (IconComponent) => (
               <Box
@@ -133,7 +138,7 @@ const SportsButtons = ({ onSportSelect, selectedSport }) => {
                 key={sport._id}
                 variant={isSelected ? "contained" : "outlined"}
                 color="primary"
-                onClick={() => onSportSelect(sport._id)}
+                onClick={() => handleSportSelect(sport)}
                 sx={{ 
                   height: 40,
                   p: 0,

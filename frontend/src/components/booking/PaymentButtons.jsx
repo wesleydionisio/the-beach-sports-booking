@@ -38,7 +38,6 @@ const PaymentButtons = ({ onPaymentSelect, selectedPayment }) => {
           const sanitizedUrl = await sanitizeSvg(iconUrl);
           loadedIcons[method.label] = sanitizedUrl;
         } catch (error) {
-          console.log(`Ícone não encontrado para ${method.label}:`, error);
           loadedIcons[method.label] = null;
         }
       }
@@ -49,7 +48,6 @@ const PaymentButtons = ({ onPaymentSelect, selectedPayment }) => {
   useEffect(() => {
     const fetchPaymentMethods = async () => {
       try {
-        console.log('Buscando métodos de pagamento...');
         const response = await axios.get('/payment-methods');
         
         if (response.data.success) {
@@ -57,7 +55,6 @@ const PaymentButtons = ({ onPaymentSelect, selectedPayment }) => {
             .sort((a, b) => a.displayOrder - b.displayOrder)
             .filter(method => method.active);
           
-          console.log('Métodos de pagamento:', sortedMethods);
           setPaymentMethods(sortedMethods);
           await loadIcons(sortedMethods);
         }

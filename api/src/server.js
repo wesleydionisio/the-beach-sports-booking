@@ -76,10 +76,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Adicione um endpoint de health check
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // Inicializar o servidor
 const PORT = process.env.PORT || 3000;

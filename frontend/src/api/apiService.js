@@ -1,4 +1,3 @@
-// src/api/apiService.js
 import axios from 'axios';
 
 const api = axios.create({
@@ -10,24 +9,12 @@ const api = axios.create({
   }
 });
 
-// Interceptor para logging
-api.interceptors.request.use(request => {
-  console.log('Request:', {
-    url: request.url,
-    method: request.method,
-    data: request.data,
-    headers: request.headers
-  });
-  return request;
-});
-
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('Token anexado ao header:', config.headers.Authorization);
     }
     return config;
   },

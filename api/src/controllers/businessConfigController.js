@@ -14,7 +14,8 @@ exports.getConfig = async (req, res) => {
         horario_fechamento: '22:00',
         valor_hora_padrao: 120,
         valor_hora_nobre: 150,
-        percentual_hora_nobre: 25
+        percentual_hora_nobre: 25,
+        min_time_before_booking: 60 // 1 hora
       });
     }
 

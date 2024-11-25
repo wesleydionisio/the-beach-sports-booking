@@ -2,6 +2,19 @@
 
 const mongoose = require('mongoose');
 
+const RecorrenciaSchema = new mongoose.Schema({
+  horarios: [{
+    data: Date,
+    horario_inicio: String,
+    horario_fim: String,
+    status: {
+      type: String,
+      enum: ['confirmado', 'cancelado', 'pendente'],
+      default: 'confirmado'
+    }
+  }]
+});
+
 const BookingSchema = new mongoose.Schema({
   usuario_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -42,7 +55,8 @@ const BookingSchema = new mongoose.Schema({
   },
   total: {
     type: Number,
-    required: true,
+    required: [true, 'O valor total é obrigatório'],
+    min: [0, 'O valor total não pode ser negativo']
   },
   pague_no_local: {
     type: Boolean,
@@ -58,41 +72,8 @@ const BookingSchema = new mongoose.Schema({
     default: null
   },
   recorrencia: {
-    duracao_meses: {
-      type: Number,
-      required: function() {
-        return this.is_recorrente;
-      }
-    },
-    dia_semana: {
-      type: Number,
-      required: function() {
-        return this.is_recorrente;
-      }
-    },
-    data_inicio: {
-      type: Date,
-      required: function() {
-        return this.is_recorrente;
-      }
-    },
-    data_fim: {
-      type: Date,
-      required: function() {
-        return this.is_recorrente;
-      }
-    },
-    horarios: [{
-      data: Date,
-      horario_inicio: String,
-      horario_fim: String,
-      status: String,
-      valor: Number,
-      booking_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Booking'
-      }
-    }]
+    type: RecorrenciaSchema,
+    default: { horarios: [] }
   }
 }, { timestamps: true });
 

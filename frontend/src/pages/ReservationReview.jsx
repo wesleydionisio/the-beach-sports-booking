@@ -26,9 +26,11 @@ import SportsIcon from '@mui/icons-material/Sports';
 import PageContainer from '../components/layout/PageContainer';
 import SectionLabel from '../components/common/SectionLabel';
 import SportLabel from '../components/common/SportLabel';
+import DateService from '../utils/dateService';
+import dayjs from 'dayjs';
 
 const ReservationReview = () => {
-  const { reservationId } = useParams(); // Mudado de id para reservationId para match com a rota
+  const { reservationId } = useParams();
   const navigate = useNavigate();
   const [reservation, setReservation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,41 +42,42 @@ const ReservationReview = () => {
 
   const fetchReservationDetails = async () => {
     try {
-      console.log('1. Iniciando busca da reserva:', reservationId);
-      const response = await axios.get(`/bookings/${reservationId}`);
-      console.log('2. Resposta completa da API:', response.data);
+      console.log('1. Buscando reserva:', reservationId);
+      setLoading(true);
       
-      if (response.data && response.data.success) {
+      const response = await axios.get(`/bookings/${reservationId}`);
+      
+      if (response.data?.success) {
         const reservationData = response.data.reservation;
-        console.log('3. Dados brutos da reserva:', reservationData);
         
-        // Garantir que temos uma data de criação válida
-        const created_at = reservationData.created_at || 
-                          (reservationData._id ? new Date(parseInt(reservationData._id.substring(0, 8), 16) * 1000) : new Date());
-        
-        // Formatar os dados corretamente
         const formattedReservation = {
           ...reservationData,
-          quadra_imagem: reservationData.foto_principal,
-          cliente_nome: reservationData.cliente_nome || 'Cliente não identificado',
-          created_at: created_at,
-          esporte: typeof reservationData.esporte === 'string' 
-            ? { nome: reservationData.esporte }
-            : reservationData.esporte
+          quadra: {
+            id: reservationData.quadra_id,
+            nome: reservationData.nome,
+            imagem_url: reservationData.foto_principal
+          },
+          esporte: {
+            nome: reservationData.esporte,
+            icon: null
+          },
+          formattedDate: DateService.formatDisplay(reservationData.data),
+          formattedTime: DateService.formatTimeInterval(
+            reservationData.horario_inicio,
+            reservationData.horario_fim
+          )
         };
 
-        console.log('4. Dados formatados:', {
-          cliente_nome: formattedReservation.cliente_nome,
-          created_at: formattedReservation.created_at,
-          data_formatada: formatDate(formattedReservation.created_at)
+        console.log('4. Dados formatados final:', {
+          quadra: formattedReservation.quadra,
+          esporte: formattedReservation.esporte,
+          completo: formattedReservation
         });
 
         setReservation(formattedReservation);
-      } else {
-        throw new Error('Dados da reserva não encontrados na resposta');
       }
     } catch (error) {
-      console.error('5. Erro ao buscar reserva:', error);
+      console.error('ERRO:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -86,6 +89,26 @@ const ReservationReview = () => {
       fetchReservationDetails();
     }
   }, [reservationId]);
+
+  useEffect(() => {
+    if (reservation) {
+      console.log('5. Estado final da reserva:', {
+        quadra: {
+          id: reservation.quadra?.id,
+          nome: reservation.quadra?.nome,
+          imagem_url: reservation.quadra?.imagem_url,
+          completo: reservation.quadra
+        },
+        esporte: {
+          id: reservation.esporte?.id,
+          nome: reservation.esporte?.nome,
+          icon: reservation.esporte?.icon,
+          completo: reservation.esporte
+        },
+        dados_completos: reservation
+      });
+    }
+  }, [reservation]);
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -120,7 +143,6 @@ const ReservationReview = () => {
         }));
       }
     } catch (error) {
-      console.error('Erro ao cancelar reserva:', error);
       setSnackbar({
         open: true,
         message: 'Erro ao cancelar reserva. Tente novamente.',
@@ -132,13 +154,34 @@ const ReservationReview = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
+  const formatTimeToStart = (date, horarioInicio) => {
+    if (!date || !horarioInicio) return '-';
+    
     try {
-      const date = new Date(dateString);
-      return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+      // Criar data/hora completa do início da reserva
+      const [hora, minuto] = horarioInicio.split(':');
+      const dataReserva = dayjs(date)
+        .hour(parseInt(hora))
+        .minute(parseInt(minuto))
+        .second(0);
+      
+      // Data atual
+      const agora = dayjs();
+
+      if (dataReserva.isBefore(agora)) {
+        return 'FINALIZADO';
+      }
+
+      // Calcular diferença em horas
+      const horasRestantes = dataReserva.diff(agora, 'hours');
+      
+      if (horasRestantes < 24) {
+        return `${horasRestantes} HORAS`;
+      } else {
+        const diasRestantes = Math.floor(horasRestantes / 24);
+        return `${diasRestantes} DIAS`;
+      }
     } catch (error) {
-      console.error('Erro ao formatar data:', error);
       return '-';
     }
   };
@@ -179,7 +222,6 @@ const ReservationReview = () => {
       const diffDays = Math.ceil(diffHours / 24);
       return `${diffDays} DIAS`;
     } catch (error) {
-      console.error('Erro ao calcular status do tempo:', error);
       return '-';
     }
   };
@@ -192,7 +234,6 @@ const ReservationReview = () => {
         locale: ptBR
       });
     } catch (error) {
-      console.error('Erro ao formatar data completa:', error);
       return '-';
     }
   };
@@ -213,7 +254,6 @@ const ReservationReview = () => {
         locale: ptBR
       }).replace(/^\w/, (c) => c.toUpperCase());
     } catch (error) {
-      console.error('Erro ao formatar dia da semana:', error);
       return '-';
     }
   };
@@ -221,14 +261,41 @@ const ReservationReview = () => {
   const formatSimpleDate = (date) => {
     if (!date) return '-';
     try {
-      // Formata como DD/MM/YYYY
-      return format(new Date(date), "dd/MM/yyyy", {
-        locale: ptBR
-      });
+      // Usar o mesmo método de formatação do DateService
+      return DateService.formatDisplay(date);
     } catch (error) {
-      console.error('Erro ao formatar data:', error);
       return '-';
     }
+  };
+
+  const renderRecurrenceInfo = () => {
+    if (!reservation?.is_recorrente) return null;
+
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="h6">Agendamento Recorrente</Typography>
+        <Box sx={{ mt: 1 }}>
+          {reservation.recorrencia.horarios.map((horario, index) => (
+            <Box 
+              key={index}
+              sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                p: 1,
+                borderBottom: '1px solid #eee'
+              }}
+            >
+              <Typography>
+                {format(new Date(horario.data), "dd/MM/yyyy")}
+              </Typography>
+              <Typography color={horario.status === 'confirmado' ? 'success.main' : 'error.main'}>
+                {horario.status}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    );
   };
 
   if (loading) {
@@ -309,7 +376,7 @@ const ReservationReview = () => {
                 fontSize: '1.5rem'
               }}
             >
-              {getTimeStatus(reservation?.data, reservation?.horario_inicio, reservation?.horario_fim)}
+              {formatTimeToStart(reservation?.data, reservation?.horario_inicio)}
             </Typography>
           </Box>
 
@@ -349,7 +416,7 @@ const ReservationReview = () => {
                     }}
                   />
                   <Chip
-                    label={formatSimpleDate(reservation?.data)}
+                    label={reservation?.formattedDate}
                     color="primary"
                     sx={{ 
                       fontWeight: 'bold',
@@ -366,12 +433,8 @@ const ReservationReview = () => {
           {/* Esporte Label com Blur */}
           <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 2 }}>
             <SportLabel 
-              label={typeof reservation?.esporte === 'string' 
-                ? reservation.esporte 
-                : reservation?.esporte?.nome || '-'}
-              sportData={typeof reservation?.esporte === 'string' 
-                ? { nome: reservation.esporte }
-                : reservation?.esporte}
+              label={reservation?.esporte?.nome || '-'}
+              sportData={reservation?.esporte}
             />
           </Box>
 
@@ -379,25 +442,15 @@ const ReservationReview = () => {
           <Box
             sx={{
               height: 200,
-              backgroundImage: `url(${reservation?.quadra_imagem || ''})`,
+              backgroundImage: `url(${reservation?.quadra?.imagem_url})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               position: 'relative',
               backgroundColor: '#333',
             }}
           >
-            {console.log('7. Renderizando quadra card:', {
-              imagem: reservation?.quadra_imagem,
-              nome: reservation?.nome,
-              esporte: reservation?.esporte
-            })}
-            
-            {/* Esporte Label com Blur */}
+            {/* Esporte Label */}
             <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 2 }}>
-              {console.log('8. Renderizando sport label:', {
-                nome: reservation?.esporte?.nome,
-                icon: reservation?.esporte?.icon
-              })}
               <SportLabel 
                 label={reservation?.esporte?.nome || '-'}
                 sportData={reservation?.esporte}
@@ -417,8 +470,9 @@ const ReservationReview = () => {
                 zIndex: 2
               }}
             >
-              <SectionLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Quadra</SectionLabel>
-              <Typography variant="h6">{reservation?.nome || 'Nome da quadra não disponível'}</Typography>
+              <Typography variant="h6">
+                {reservation?.quadra?.nome || 'Quadra não disponível'}
+              </Typography>
             </Box>
           </Box>
 
@@ -507,6 +561,8 @@ const ReservationReview = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {renderRecurrenceInfo()}
       </Box>
     </PageContainer>
   );
