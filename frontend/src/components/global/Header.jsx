@@ -122,34 +122,18 @@ const Header = () => {
         pt: 8,
       }}
     >
-      {/* Botão Fechar */}
-      <IconButton
-        onClick={toggleDrawer(false)}
-        sx={{
-          position: 'absolute',
-          right: 16,
-          top: 16,
-          color: 'inherit',
-          padding: 1
-        }}
-      >
-        <CloseIcon sx={{ 
-          fontSize: 32
-        }} />
-      </IconButton>
-
       {/* Lista de Menu */}
       <List sx={{ width: '100%', pt: 4 }}>
         {menuItems.map((item, index) => (
           <Slide
             direction="right"
             in={isDrawerOpen}
-            timeout={(index + 1) * 100}
+            timeout={(index + 1) * 150}
             key={item.label}
           >
             <ListItem 
               disablePadding
-              onClick={toggleDrawer(false)}
+              onClick={() => setIsDrawerOpen(false)}
             >
               <ListItemButton
                 component={RouterLink}
@@ -184,7 +168,7 @@ const Header = () => {
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <Fade in={isDrawerOpen} timeout={600}>
+        <Fade in={isDrawerOpen} timeout={900}>
           {user ? (
             <Button
               component={RouterLink}
@@ -332,22 +316,45 @@ const Header = () => {
               <IconButton
                 edge="start"
                 color="inherit"
-                aria-label="menu"
-                onClick={toggleDrawer(true)}
+                aria-label={isDrawerOpen ? "close menu" : "open menu"}
+                onClick={() => setIsDrawerOpen(!isDrawerOpen)}
                 sx={{
                   padding: 1,
+                  transition: 'transform 0.45s ease',
+                  transform: isDrawerOpen ? 'rotate(180deg)' : 'none',
                 }}
               >
-                <MenuIcon sx={{ fontSize: 32 }} />
+                {isDrawerOpen ? (
+                  <CloseIcon sx={{ fontSize: 32 }} />
+                ) : (
+                  <MenuIcon sx={{ fontSize: 32 }} />
+                )}
               </IconButton>
               <Drawer
                 anchor="right"
                 open={isDrawerOpen}
-                onClose={toggleDrawer(false)}
+                onClose={() => setIsDrawerOpen(false)}
+                transitionDuration={450}
                 sx={{
                   '& .MuiDrawer-paper': {
                     width: '100%',
-                    transition: 'transform 0.3s ease-in-out'
+                    transition: 'transform 0.65s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transform: 'translateX(100%)',
+                    '&.MuiDrawer-paperAnchorRight': {
+                      '&.MuiDrawer-paperOpen': {
+                        transform: 'translateX(0)',
+                      }
+                    }
+                  },
+                  '& .MuiBackdrop-root': {
+                    transition: 'opacity 0.65s cubic-bezier(0.4, 0, 0.2, 1) !important'
+                  }
+                }}
+                SlideProps={{
+                  direction: "left",
+                  timeout: {
+                    enter: 650,
+                    exit: 650
                   }
                 }}
               >

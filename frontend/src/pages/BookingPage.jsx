@@ -858,18 +858,19 @@ const BookingPage = () => {
                   {/* Seleão de Esporte e Pagamento */}
                   <Grid 
                     container 
-                    spacing={3} 
+                    spacing={{ xs: 2, md: 3 }}
                     sx={{ 
                       mt: 0,
+                      mb: 0,
                       '& .MuiGrid-item': {
-                        paddingTop: 0, // Remove o padding superior dos itens do grid
+                        paddingTop: { xs: '16px', md: '24px' },
                         display: 'flex',
                         flexDirection: 'column'
                       }
                     }}
                   >
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ height: '100%' }}> {/* Container com altura 100% */}
+                      <Box sx={{ height: '100%', pb: { xs: 0, md: 2 } }}>
                         <Typography variant="h6" sx={{ mb: 1, fontWeight: 550 }}>
                           Selecione um esporte:
                         </Typography>
@@ -882,7 +883,7 @@ const BookingPage = () => {
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ height: '100%' }}> {/* Container com altura 100% */}
+                      <Box sx={{ height: '100%', pb: { xs: 0, md: 2 } }}>
                         <Typography variant="h6" sx={{ mb: 1, fontWeight: 550 }}>
                           Forma de pagamento:
                         </Typography>
@@ -894,19 +895,37 @@ const BookingPage = () => {
                     </Grid>
                   </Grid>
 
-                  {/* Botão de Confirmar Reserva */}
-                  <Box sx={{ mt: 2 }}>
+                  {/* Container do botão de recorrência */}
+                  <Box sx={{ 
+                    mt: { xs: 0, md: 0 },
+                    pt: { xs: 0, md: 2 },
+                    pb: { xs: 0, md: 2 }
+                  }}>
+                    <Typography variant="h6" sx={{ mb: 1, fontWeight: 550 }}>
+                      Opções adicionais:
+                    </Typography>
+                    
                     <Button
-                      variant="outlined"
+                      variant={selectedRecurrence ? "contained" : "outlined"}
                       onClick={() => setRecurrenceModalOpen(true)}
                       startIcon={<AccessTimeIcon />}
                       sx={{
                         height: 40,
                         textTransform: 'none',
-                        fontSize: '1rem'
+                        fontSize: '1rem',
+                        ...(selectedRecurrence && {
+                          backgroundColor: 'primary.main',
+                          color: 'white',
+                          '&:hover': {
+                            backgroundColor: 'primary.dark',
+                          }
+                        })
                       }}
                     >
-                      Agendar Horário Fixo
+                      {selectedRecurrence 
+                        ? `Horário Fixo - ${selectedRecurrence.tipo} ${selectedRecurrence.tipo === 1 ? 'mês' : 'meses'}`
+                        : 'Agendar Horário Fixo'
+                      }
                     </Button>
 
                     <RecurrenceModal

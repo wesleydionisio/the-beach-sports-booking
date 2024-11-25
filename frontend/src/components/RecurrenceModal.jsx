@@ -146,10 +146,16 @@ const RecurrenceModal = ({
     }
   };
 
+  const handleClose = () => {
+    setSelectedOption(null); // Limpa a seleção do modal
+    onClose(); // Fecha o modal
+    onConfirm(null); // Limpa a recorrência no componente pai
+  };
+
   return (
     <Dialog 
       open={open} 
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth="sm"
       fullWidth
       sx={{
@@ -167,13 +173,14 @@ const RecurrenceModal = ({
       </DialogTitle>
       <DialogContent 
         sx={{ 
+          flex: 1,
           display: 'flex', 
           flexDirection: 'column',
-          p: { xs: 2, sm: 3 },
-          overflow: 'hidden'
+          overflow: 'hidden',
+          p: { xs: 2, sm: 3 }
         }}
       >
-        <Box sx={{ mb: 3, flexShrink: 0 }}>
+        <Box sx={{ mb: 3 }}>
           {(!selectedSlot?.esporte || !selectedSlot?.horario_inicio || !selectedSlot?.horario_fim) && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               Por favor, selecione um esporte e um horário antes de continuar.
@@ -216,7 +223,15 @@ const RecurrenceModal = ({
                 <Button
                   key={months}
                   variant={selectedOption === months ? "contained" : "outlined"}
-                  onClick={() => setSelectedOption(months)}
+                  onClick={() => {
+                    // Se já estiver selecionado, deseleciona
+                    if (selectedOption === months) {
+                      setSelectedOption(null);
+                      onConfirm(null); // Limpa a recorrência no componente pai
+                    } else {
+                      setSelectedOption(months);
+                    }
+                  }}
                   size="small"
                   disabled={isDisabled}
                   sx={{ 
@@ -253,44 +268,28 @@ const RecurrenceModal = ({
               );
             })}
           </Box>
-        </Box>
 
-        <Box sx={{ 
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden'
-        }}>
-          {loading ? (
-            <LoadingSkeleton />
-          ) : (
-            selectedOption && (
-              <Box sx={{ 
-                height: '100%',
-                overflow: 'auto',
-                WebkitOverflowScrolling: 'touch',
-                '&::-webkit-scrollbar': { width: '6px' },
-                '&::-webkit-scrollbar-track': {
-                  background: '#f1f1f1',
-                  borderRadius: '3px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: '#888',
-                  borderRadius: '3px',
-                  '&:hover': { background: '#666' }
-                }
-              }}>
+          <Box sx={{ 
+            flex: 1,
+            minHeight: 0,
+            position: 'relative'
+          }}>
+            {loading ? (
+              <LoadingSkeleton />
+            ) : (
+              selectedOption && (
                 <RecurrencePreview
                   selectedSlot={selectedSlot}
                   selectedOption={selectedOption}
                   previewDates={previewDates}
                 />
-              </Box>
-            )
-          )}
+              )
+            )}
+          </Box>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ flexShrink: 0 }}>
-        <Button onClick={onClose} disabled={loading}>
+      <DialogActions>
+        <Button onClick={handleClose} disabled={loading}>
           Cancelar
         </Button>
         <Button 
