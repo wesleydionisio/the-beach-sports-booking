@@ -70,7 +70,7 @@ const PerfilPage = () => {
       setLoading(true);
       console.log('📚 Buscando reservas do usuário...');
       
-      const response = await axios.get('/bookings/user');
+      const response = await axios.get('/bookings/minhas-reservas');
       
       if (response.data.success) {
         console.log('✅ Reservas carregadas:', response.data.reservas.length);

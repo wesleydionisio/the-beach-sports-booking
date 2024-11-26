@@ -11,14 +11,17 @@ router.get('/check', bookingController.checkTimeSlots);
 // Rotas protegidas
 router.use(authMiddleware);
 
-// Rotas de agendamento normal
+// IMPORTANTE: Colocar rotas específicas antes das rotas com parâmetros
+router.get('/minhas-reservas', bookingController.getUserBookings); // Mudamos o path para evitar conflito
+
+// Rotas de recorrência
+router.post('/recorrencia/preview', bookingController.previewRecorrencia);
+router.post('/recorrencia/confirmar', bookingController.confirmarRecorrencia);
+
+// Rotas com parâmetros devem vir por último
 router.post('/', bookingController.createBooking);
 router.get('/:id', bookingController.getBookingById);
 router.post('/:id/cancel', bookingController.cancelBooking);
 router.patch('/:id', bookingController.updateBooking);
-
-// Rotas de recorrência
-router.post('/recorrencia/preview', authMiddleware, bookingController.previewRecorrencia);
-router.post('/recorrencia/confirmar', authMiddleware, bookingController.confirmarRecorrencia);
 
 module.exports = router;

@@ -329,23 +329,67 @@ exports.getBookingById = async (req, res) => {
 // Função para obter todas as reservas do usuário autenticado
 exports.getUserBookings = async (req, res) => {
   try {
-    const userId = req.user.id; // Obtido pelo authMiddleware
+    console.log('1. Buscando reservas para usuário:', req.user.id);
 
-    // Buscar todas as reservas onde usuario_id é igual ao ID do usuário autenticado
-    const reservas = await Booking.find({ usuario_id: userId })
-      .populate('quadra_id')
-      .populate('esporte')
-      .sort({ data: -1 }); // Ordenar por data descendente (opcional)
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuário não autenticado'
+      });
+    }
+
+    // Verificar se o ID é válido
+    if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de usuário inválido'
+      });
+    }
+
+    // Buscar todas as reservas do usuário
+    const reservas = await Booking.find({ 
+      usuario_id: req.user.id 
+    })
+    .populate('quadra_id', 'nome foto_principal') // Selecionar apenas os campos necessários
+    .populate('esporte', 'nome icon')
+    .populate('metodo_pagamento', 'label')
+    .sort({ data: -1 }) // Ordenar por data mais recente
+    .lean(); // Converter para objeto JavaScript puro
+
+    console.log('2. Reservas encontradas:', reservas.length);
+
+    // Formatar as reservas para o frontend
+    const reservasFormatadas = reservas.map(reserva => ({
+      _id: reserva._id,
+      data: reserva.data,
+      horario_inicio: reserva.horario_inicio,
+      horario_fim: reserva.horario_fim,
+      status: reserva.status,
+      total: reserva.total,
+      quadra_id: reserva.quadra_id ? {
+        _id: reserva.quadra_id._id,
+        nome: reserva.quadra_id.nome,
+        foto_principal: reserva.quadra_id.foto_principal
+      } : null,
+      esporte: reserva.esporte ? {
+        _id: reserva.esporte._id,
+        nome: reserva.esporte.nome,
+        icon: reserva.esporte.icon
+      } : null,
+      metodo_pagamento: reserva.metodo_pagamento?.label || 'Não especificado'
+    }));
 
     res.status(200).json({
       success: true,
-      reservas,
+      reservas: reservasFormatadas
     });
+
   } catch (error) {
-    console.error('Erro ao buscar reservas do usuário:', error);
+    console.error('3. Erro ao buscar reservas:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor.',
+      message: 'Erro ao buscar reservas do usuário',
+      error: error.message
     });
   }
 };
