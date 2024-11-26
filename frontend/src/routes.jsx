@@ -10,6 +10,14 @@ import ReviewPage from './pages/ReviewPage';
 import ReservationReview from './pages/ReservationReview';
 import PerfilPage from './pages/PerfilPage';
 import PrivateRoute from './components/PrivateRoute';
+import AdminLayout from './components/admin/layout/AdminLayout';
+import DashboardPage from './pages/admin/DashboardPage';
+import UsersPage from './pages/admin/UsersPage';
+import CourtsPage from './pages/admin/CourtsPage';
+import BookingsPage from './pages/admin/BookingsPage';
+import FinancePage from './pages/admin/FinancePage';
+import SettingsPage from './pages/admin/SettingsPage';
+
 
 const AppRoutes = () => {
   return (
@@ -28,6 +36,14 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+        <Route path="/admin" element={<PrivateRoute><AdminLayout /></PrivateRoute>}>
+          <Route index element={<DashboardPage />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="courts" element={<CourtsPage />} />
+          <Route path="bookings" element={<BookingsPage />} />
+          <Route path="finance" element={<FinancePage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
       </Route>
     </Routes>
   );
