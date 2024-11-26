@@ -215,7 +215,8 @@ const BookingPage = () => {
           axios.get('/business-config')
         ]);
 
-        const config = configResponse.data;
+        // Extrair a configuração corretamente
+        const config = configResponse.data.config;
         setBusinessConfig(config);
 
         const slotsGerados = generateTimeSlots(

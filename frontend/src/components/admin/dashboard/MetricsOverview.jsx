@@ -1,48 +1,41 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Grid } from '@mui/material';
 import MetricCard from './MetricCard';
-import {
-  People,
-  SportsTennis,
-  EventNote,
-  AttachMoney
-} from '@mui/icons-material';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import TodayIcon from '@mui/icons-material/Today';
 
-const metrics = [
-  {
-    title: 'Total de Usuários',
-    value: '156',
-    icon: <People />,
-    color: '#1976d2'
-  },
-  {
-    title: 'Quadras Ativas',
-    value: '8',
-    icon: <SportsTennis />,
-    color: '#2e7d32'
-  },
-  {
-    title: 'Agendamentos Hoje',
-    value: '12',
-    icon: <EventNote />,
-    color: '#ed6c02'
-  },
-  {
-    title: 'Receita Mensal',
-    value: 'R$ 15.680',
-    icon: <AttachMoney />,
-    color: '#9c27b0'
-  }
-];
+const MetricsOverview = ({ metrics }) => {
+  useEffect(() => {
+    console.log('8. MetricsOverview recebeu props:', metrics);
+  }, [metrics]);
 
-const MetricsOverview = () => {
   return (
     <Grid container spacing={3}>
-      {metrics.map((metric, index) => (
-        <Grid item xs={12} sm={6} md={3} key={index}>
-          <MetricCard {...metric} />
-        </Grid>
-      ))}
+      <Grid item xs={12} sm={6} md={4}>
+        <MetricCard
+          title="Total de Reservas"
+          value={metrics?.totalReservas || 0}
+          icon={<CalendarMonthIcon />}
+          color="#4CAF50"
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={4}>
+        <MetricCard
+          title="Receita Total"
+          value={`R$ ${(metrics?.receitaTotal || 0).toFixed(2)}`}
+          icon={<AttachMoneyIcon />}
+          color="#2196F3"
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={4}>
+        <MetricCard
+          title="Reservas Hoje"
+          value={metrics?.reservasHoje || 0}
+          icon={<TodayIcon />}
+          color="#9C27B0"
+        />
+      </Grid>
     </Grid>
   );
 };

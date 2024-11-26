@@ -1,17 +1,18 @@
-// src/routes/userRoutes.js
-
 const express = require('express');
-const userController = require('../controllers/userController');
-const authMiddleware = require('../middlewares/authMiddleware');
-
 const router = express.Router();
+const userController = require('../controllers/userController');    
+const authMiddleware = require('../middlewares/authMiddleware');
+const adminMiddleware = require('../middlewares/adminMiddleware');
 
-// Rota para obter o perfil do usuário
-router.get('/profile', authMiddleware, userController.getUserProfile);
+// Rotas protegidas de usuário
+router.use(authMiddleware);
+router.get('/profile', userController.getUserProfile);
+router.put('/profile', userController.updateUserProfile);
 
-// Rota para atualizar o perfil do usuário
-router.put('/profile', authMiddleware, userController.updateUserProfile);
-
-// Outras rotas relacionadas a usuários...
+// Rotas administrativas
+router.use(adminMiddleware);
+router.get('/', userController.listUsers);
+router.put('/:id', userController.updateUser);
+router.delete('/:id', userController.deleteUser);
 
 module.exports = router;

@@ -1,7 +1,8 @@
 // src/routes.jsx
 
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import MainLayout from './components/layout/MainLayout';
 import HomePage from './pages/HomePage';
 import BookingPage from './pages/BookingPage';
@@ -20,23 +21,29 @@ import SettingsPage from './pages/admin/SettingsPage';
 
 
 const AppRoutes = () => {
+  const { isAuthenticated, user } = useAuth();
+  const isAdmin = isAuthenticated && user?.role === 'admin';
+
   return (
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/booking/:quadraId" element={<BookingPage />} />
-        <Route path="/login" element={<LoginPage />} />
         <Route path="/reserva/:id" element={<ReservationReview />} />
         <Route path="/review" element={<ReviewPage />} />
-        <Route
-          path="/perfil"
-          element={
-            <PrivateRoute>
-              <PerfilPage />
-            </PrivateRoute>
-          }
-        />
-        <Route path="/admin" element={<PrivateRoute><AdminLayout /></PrivateRoute>}>
+        <Route path="/login" element={
+          !isAuthenticated ? <LoginPage /> : <Navigate to={isAdmin ? "/admin" : "/"} />
+        } />
+        <Route path="/perfil" element={
+          <PrivateRoute>
+            <PerfilPage />
+          </PrivateRoute>
+        } />
+        <Route path="/admin" element={
+          <PrivateRoute adminOnly>
+            <AdminLayout />
+          </PrivateRoute>
+        }>
           <Route index element={<DashboardPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="courts" element={<CourtsPage />} />

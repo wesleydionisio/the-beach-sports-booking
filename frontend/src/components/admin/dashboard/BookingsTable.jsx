@@ -1,86 +1,98 @@
 import React from 'react';
 import {
-  Paper,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Typography,
-  Chip
+  Paper,
+  Chip,
+  IconButton,
+  Box
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import dayjs from 'dayjs';
 
-const bookings = [
-  {
-    id: 1,
-    cliente: 'João Silva',
-    quadra: 'Quadra 1',
-    horario: '09:00',
-    esporte: 'Beach Tennis',
-    status: 'confirmed'
-  },
-  {
-    id: 2,
-    cliente: 'Maria Santos',
-    quadra: 'Quadra 2',
-    horario: '10:00',
-    esporte: 'Vôlei de Praia',
-    status: 'pending'
-  },
-  {
-    id: 3,
-    cliente: 'Pedro Costa',
-    quadra: 'Quadra 1',
-    horario: '11:00',
-    esporte: 'Futevôlei',
-    status: 'confirmed'
-  }
-];
-
-const statusConfig = {
-  confirmed: { label: 'Confirmado', color: 'success' },
-  pending: { label: 'Pendente', color: 'warning' },
-  canceled: { label: 'Cancelado', color: 'error' }
+const getStatusColor = (status) => {
+  const statusMap = {
+    'confirmada': 'success',
+    'pendente': 'warning',
+    'cancelada': 'error',
+    'concluida': 'info'
+  };
+  return statusMap[status] || 'default';
 };
 
-const BookingsTable = () => {
+const getStatusLabel = (status) => {
+  const statusMap = {
+    'confirmada': 'Confirmada',
+    'pendente': 'Pendente',
+    'cancelada': 'Cancelada',
+    'concluida': 'Concluída'
+  };
+  return statusMap[status] || status;
+};
+
+const BookingsTable = ({ bookings }) => {
+  console.log('Dados recebidos na tabela:', bookings);
+
   return (
-    <Paper sx={{ p: 2 }}>
+    <Box>
       <Typography variant="h6" gutterBottom>
-        Próximos Agendamentos
+        Últimas Reservas
       </Typography>
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Cliente</TableCell>
-              <TableCell>Quadra</TableCell>
-              <TableCell>Horário</TableCell>
-              <TableCell>Esporte</TableCell>
-              <TableCell>Status</TableCell>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Cliente</TableCell>
+            <TableCell>Quadra</TableCell>
+            <TableCell>Data da Reserva</TableCell>
+            <TableCell>Horário da Reserva</TableCell>
+            <TableCell>Data/Hora Criação</TableCell>
+            <TableCell>Status</TableCell>
+            <TableCell>Valor</TableCell>
+            <TableCell align="center">Ações</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {bookings.map((booking) => (
+            <TableRow key={booking._id} hover>
+              <TableCell>{booking.usuario_id?.nome || 'N/A'}</TableCell>
+              <TableCell>{booking.quadra_id?.nome || 'N/A'}</TableCell>
+              <TableCell>
+                {dayjs(booking.data).format('DD/MM/YYYY')}
+              </TableCell>
+              <TableCell>
+                {`${booking.horario_inicio} - ${booking.horario_fim}`}
+              </TableCell>
+              <TableCell>
+                {dayjs(booking.createdAt).format('DD/MM/YYYY HH:mm')}
+              </TableCell>
+              <TableCell>
+                <Chip 
+                  label={getStatusLabel(booking.status)}
+                  color={getStatusColor(booking.status)}
+                  size="small"
+                />
+              </TableCell>
+              <TableCell>
+                {`R$ ${booking.total?.toFixed(2) || '0.00'}`}
+              </TableCell>
+              <TableCell align="center">
+                <IconButton 
+                  size="small"
+                  onClick={() => console.log('Editar reserva:', booking._id)}
+                  color="primary"
+                >
+                  <EditIcon />
+                </IconButton>
+              </TableCell>
             </TableRow>
-          </TableHead>
-          <TableBody>
-            {bookings.map((booking) => (
-              <TableRow key={booking.id} hover>
-                <TableCell>{booking.cliente}</TableCell>
-                <TableCell>{booking.quadra}</TableCell>
-                <TableCell>{booking.horario}</TableCell>
-                <TableCell>{booking.esporte}</TableCell>
-                <TableCell>
-                  <Chip
-                    size="small"
-                    label={statusConfig[booking.status].label}
-                    color={statusConfig[booking.status].color}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Paper>
+          ))}
+        </TableBody>
+      </Table>
+    </Box>
   );
 };
 

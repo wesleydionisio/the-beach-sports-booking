@@ -14,7 +14,13 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const { enqueueSnackbar } = useSnackbar();
-  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!localStorage.getItem('token');
+  });
+  const [user, setUser] = useState(() => {
+    const userData = localStorage.getItem('user');
+    return userData ? JSON.parse(userData) : null;
+  });
   const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
   const [loading, setLoading] = useState(true);
 

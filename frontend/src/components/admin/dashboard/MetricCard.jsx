@@ -5,34 +5,38 @@ const MetricCard = ({ title, value, icon, color }) => {
   return (
     <Paper
       sx={{
-        p: 2,
+        p: 3,
+        height: '100%',
         display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        height: '100%'
+        flexDirection: 'column',
+        position: 'relative',
+        overflow: 'hidden',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: 3,
+          transition: 'all 0.3s ease'
+        }
       }}
     >
       <Box
         sx={{
-          p: 1.5,
-          borderRadius: 2,
-          backgroundColor: `${color}15`,
-          color: color,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          p: 2,
+          color: `${color}40`
         }}
       >
-        {icon}
+        {React.cloneElement(icon, { sx: { fontSize: 48 } })}
       </Box>
-      <Box>
-        <Typography variant="h6" component="div">
-          {value}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {title}
-        </Typography>
-      </Box>
+
+      <Typography variant="h6" color="text.secondary" gutterBottom>
+        {title}
+      </Typography>
+      
+      <Typography variant="h4" component="div" sx={{ mt: 'auto', color }}>
+        {value}
+      </Typography>
     </Paper>
   );
 };

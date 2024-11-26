@@ -1,38 +1,20 @@
-// src/routes/courtRoutes.js
-
 const express = require('express');
-const {
-  getCourts,
-  getCourtById,
-  createCourt,
-  updateCourt,
-  deleteCourt,
-  getReservedTimes,
-  getHorariosNobres
-} = require('../controllers/courtController')
-const authMiddleware = require('../middlewares/authMiddleware');
-
 const router = express.Router();
+const courtController = require('../controllers/courtController');
+const authMiddleware = require('../middlewares/authMiddleware');
+const adminMiddleware = require('../middlewares/adminMiddleware');
 
-// Rota para listar todas as quadras
-router.get('/', getCourts);
+// Rotas públicas
+router.get('/', courtController.getCourts);
+router.get('/:id', courtController.getCourtById);
+router.get('/:id/reserved-times', courtController.getReservedTimes);
+router.get('/:quadraId/horarios-nobres', courtController.getHorariosNobres);
 
-// Rota para buscar uma quadra específica
-router.get('/:id', getCourtById);
-
-// Rota para criar uma nova quadra (autenticado)
-router.post('/', authMiddleware, createCourt);
-
-// Rota para atualizar uma quadra (autenticado)
-router.put('/:id', authMiddleware, updateCourt);
-
-// Rota para excluir uma quadra (autenticado)
-router.delete('/:id', authMiddleware, deleteCourt);
-
-// Rota para buscar horários reservados de uma quadra específica
-router.get('/:id/reserved-times', getReservedTimes);
-
-// Rota para horários nobres
-router.get('/:quadraId/horarios-nobres', getHorariosNobres);
+// Rotas administrativas
+router.use(authMiddleware);
+router.use(adminMiddleware);
+router.post('/', courtController.createCourt);
+router.put('/:id', courtController.updateCourt);
+router.delete('/:id', courtController.deleteCourt);
 
 module.exports = router;

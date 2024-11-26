@@ -1,121 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Container,
-  Typography,
   Box,
-  Paper,
-  TextField,
-  InputAdornment,
+  Typography,
   Button,
-  IconButton,
-  Tooltip
+  CircularProgress
 } from '@mui/material';
-import {
-  Search,
-  Add,
-  Refresh,
-  FilterList
-} from '@mui/icons-material';
-import { useSnackbar } from 'notistack';
+import { Add as AddIcon } from '@mui/icons-material';
 import UsersTable from '../../components/admin/users/UsersTable';
 import UserFilters from '../../components/admin/users/UserFilters';
 import UserFormModal from '../../components/admin/users/UserFormModal';
+import axios from '../../api/apiService';
+import { useSnackbar } from 'notistack';
 
 const UsersPage = () => {
-  const { enqueueSnackbar } = useSnackbar();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openModal, setOpenModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const { enqueueSnackbar } = useSnackbar();
 
-  const handleOpenModal = (user = null) => {
-    setSelectedUser(user);
-    setModalOpen(true);
-  };
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  const handleCloseModal = () => {
-    setSelectedUser(null);
-    setModalOpen(false);
-  };
-
-  const handleSubmitUser = async (values) => {
+  const fetchUsers = async () => {
     try {
-      console.log('Dados do usuário:', values);
-      enqueueSnackbar(
-        `Usuário ${values.isEditing ? 'atualizado' : 'criado'} com sucesso!`,
-        { variant: 'success' }
-      );
-      handleCloseModal();
+      setLoading(true);
+      const response = await axios.get('/auth/admin/users');
+      console.log('Usuários carregados:', response.data);
+      if (response.data.success) {
+        setUsers(response.data.users);
+      } else {
+        throw new Error(response.data.message || 'Erro ao carregar usuários');
+      }
     } catch (error) {
-      console.error('Erro ao salvar usuário:', error);
-      enqueueSnackbar('Erro ao salvar usuário', { variant: 'error' });
+      console.error('Erro ao carregar usuários:', error);
+      enqueueSnackbar(
+        error.response?.data?.message || 'Erro ao carregar usuários', 
+        { variant: 'error' }
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleEdit = (user) => {
+    setSelectedUser(user);
+    setOpenModal(true);
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Container maxWidth="xl">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h4">
           Usuários
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Gerencie os usuários do sistema
-        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setOpenModal(true)}
+        >
+          Novo Usuário
+        </Button>
       </Box>
 
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, mb: showFilters ? 2 : 0 }}>
-          <TextField
-            size="small"
-            placeholder="Buscar usuários..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ flexGrow: 1 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <Tooltip title="Filtros">
-            <IconButton 
-              color={showFilters ? 'primary' : 'default'}
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <FilterList />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Atualizar">
-            <IconButton>
-              <Refresh />
-            </IconButton>
-          </Tooltip>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => handleOpenModal()}
-          >
-            Novo Usuário
-          </Button>
-        </Box>
+      <UserFilters />
 
-        {showFilters && <UserFilters />}
-      </Paper>
-
-      <UsersTable 
-        searchTerm={searchTerm} 
-        onEditUser={handleOpenModal}
-      />
+      <Box sx={{ mt: 3 }}>
+        <UsersTable 
+          users={users}
+          onEdit={handleEdit}
+        />
+      </Box>
 
       <UserFormModal
-        open={modalOpen}
-        onClose={handleCloseModal}
+        open={openModal}
+        onClose={() => {
+          setOpenModal(false);
+          setSelectedUser(null);
+        }}
         user={selectedUser}
-        onSubmit={handleSubmitUser}
+        onSubmit={async (values) => {
+          console.log('Valores do formulário:', values);
+          // Implementar lógica de salvar depois
+        }}
       />
-    </Container>
+    </Box>
   );
 };
 

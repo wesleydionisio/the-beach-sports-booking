@@ -10,37 +10,15 @@ import {
   TablePagination,
   IconButton,
   Chip,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText
+  Tooltip,
+  Box
 } from '@mui/material';
-import { Edit, Delete, MoreVert, Block } from '@mui/icons-material';
+import { Edit } from '@mui/icons-material';
+import dayjs from 'dayjs';
 
-// Dados mockados
-const mockUsers = [
-  {
-    id: 1,
-    nome: 'João Silva',
-    email: 'joao@email.com',
-    telefone: '(11) 99999-9999',
-    status: 'active',
-    tipo: 'cliente'
-  },
-  {
-    id: 2,
-    nome: 'Maria Santos',
-    email: 'maria@email.com',
-    telefone: '(11) 98888-8888',
-    status: 'inactive',
-    tipo: 'admin'
-  }
-];
-
-const UsersTable = ({ onEdit }) => {
+const UsersTable = ({ users, onEdit }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [users, setUsers] = useState(mockUsers);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -51,16 +29,20 @@ const UsersTable = ({ onEdit }) => {
     setPage(0);
   };
 
-  const handleEdit = (user) => {
-    onEdit(user);
+  const getRoleLabel = (role) => {
+    const roles = {
+      'admin': 'Administrador',
+      'user': 'Cliente'
+    };
+    return roles[role] || role;
   };
 
-  const handleDelete = (user) => {
-    setUsers(users.filter((u) => u.id !== user.id));
-  };
-
-  const handleBlock = (user) => {
-    setUsers(users.map((u) => (u.id === user.id ? { ...u, status: 'blocked' } : u)));
+  const getRoleColor = (role) => {
+    const colors = {
+      'admin': 'error',
+      'user': 'primary'
+    };
+    return colors[role] || 'default';
   };
 
   return (
@@ -72,44 +54,51 @@ const UsersTable = ({ onEdit }) => {
               <TableCell>Nome</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Telefone</TableCell>
-              <TableCell>Status</TableCell>
               <TableCell>Tipo</TableCell>
-              <TableCell>Ações</TableCell>
+              <TableCell align="center">Total Agendamentos</TableCell>
+              <TableCell>Data Cadastro</TableCell>
+              <TableCell align="center">Ações</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {users
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((user) => (
-                <TableRow key={user.id}>
+                <TableRow key={user._id} hover>
                   <TableCell>{user.nome}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.telefone}</TableCell>
                   <TableCell>
-                    <Chip label={user.status} color={user.status === 'active' ? 'success' : 'default'} />
+                    {user.telefone.replace(/(\d{2})(\d{4,5})(\d{4})/, '($1) $2-$3')}
                   </TableCell>
-                  <TableCell>{user.tipo}</TableCell>
                   <TableCell>
-                    <Menu>
-                      <MenuItem onClick={() => handleEdit(user)}>
-                        <ListItemIcon>
+                    <Chip 
+                      label={getRoleLabel(user.role)}
+                      color={getRoleColor(user.role)}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip
+                      label={user.totalAgendamentos || 0}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {dayjs(user.createdAt).format('DD/MM/YYYY')}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box>
+                      <Tooltip title="Editar usuário">
+                        <IconButton 
+                          size="small"
+                          onClick={() => onEdit(user)}
+                          color="primary"
+                        >
                           <Edit />
-                        </ListItemIcon>
-                        <ListItemText>Editar</ListItemText>
-                      </MenuItem>
-                      <MenuItem onClick={() => handleDelete(user)}>
-                        <ListItemIcon>
-                          <Delete />
-                        </ListItemIcon>
-                        <ListItemText>Excluir</ListItemText>
-                      </MenuItem>
-                      <MenuItem onClick={() => handleBlock(user)}>
-                        <ListItemIcon>
-                          <Block />
-                        </ListItemIcon>
-                        <ListItemText>Bloquear</ListItemText>
-                      </MenuItem>
-                    </Menu>
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -117,13 +106,17 @@ const UsersTable = ({ onEdit }) => {
         </Table>
       </TableContainer>
       <TablePagination
-        rowsPerPageOptions={[10, 25, 50, 100]}
         component="div"
         count={users.length}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+        labelRowsPerPage="Linhas por página"
+        labelDisplayedRows={({ from, to, count }) => 
+          `${from}-${to} de ${count}`
+        }
+        rowsPerPageOptions={[10, 25, 50]}
       />
     </Paper>
   );

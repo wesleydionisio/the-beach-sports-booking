@@ -1,35 +1,29 @@
-import React from 'react';
-import { Paper, Typography, Box } from '@mui/material';
+import React, { useEffect } from 'react';
+import { Box, Typography } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const data = [
-  { dia: 'Seg', agendamentos: 4 },
-  { dia: 'Ter', agendamentos: 6 },
-  { dia: 'Qua', agendamentos: 8 },
-  { dia: 'Qui', agendamentos: 5 },
-  { dia: 'Sex', agendamentos: 9 },
-  { dia: 'Sáb', agendamentos: 12 },
-  { dia: 'Dom', agendamentos: 7 },
-];
+const BookingsChart = ({ data }) => {
+  useEffect(() => {
+    console.log('9. BookingsChart recebeu dados:', data);
+  }, [data]);
 
-const BookingsChart = () => {
   return (
-    <Paper sx={{ p: 2, height: '100%' }}>
+    <Box>
       <Typography variant="h6" gutterBottom>
-        Agendamentos da Semana
+        Ocupação por Quadra
       </Typography>
       <Box sx={{ width: '100%', height: 300 }}>
         <ResponsiveContainer>
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="dia" />
+            <XAxis dataKey="nome" />
             <YAxis />
             <Tooltip />
-            <Bar dataKey="agendamentos" fill="#1976d2" />
+            <Bar dataKey="totalReservas" fill="#2196F3" />
           </BarChart>
         </ResponsiveContainer>
       </Box>
-    </Paper>
+    </Box>
   );
 };
 
