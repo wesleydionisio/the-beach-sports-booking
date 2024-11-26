@@ -1,13 +1,86 @@
 import React from 'react';
-import { Box, Typography, Divider, Button, Chip } from '@mui/material';
+import { Box, Typography, Divider, Button, Chip, Skeleton } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import DateService from '../../utils/dateService';
 
-const BookingSummary = ({ selectedDate, selectedSlot, court, onEdit, recorrencia }) => {
+const BookingSummary = ({ selectedDate, selectedSlot, court, onEdit, recorrencia, loading = false }) => {
+  if (loading) {
+    return (
+      <Box sx={{ backgroundColor: '#f1f1f1', borderRadius: 1 }}>
+        {/* Horário Skeleton */}
+        <Box sx={{ 
+          p: 1.5,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="body2" sx={{ color: '#666' }}>
+            Horário
+          </Typography>
+          <Skeleton variant="text" width={100} height={24} animation="wave" />
+        </Box>
+        
+        <Divider />
+        
+        {/* Data Skeleton */}
+        <Box sx={{ 
+          p: 1.5,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1
+        }}>
+          <Box sx={{ 
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Typography variant="body2" sx={{ color: '#666' }}>
+              Data
+            </Typography>
+            <Skeleton variant="text" width={150} height={24} animation="wave" />
+          </Box>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Skeleton variant="rounded" width={200} height={24} animation="wave" />
+          </Box>
+        </Box>
+        
+        <Divider />
+        
+        {/* Quadra Skeleton */}
+        <Box sx={{ 
+          p: 1.5,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="body2" sx={{ color: '#666' }}>
+            Quadra
+          </Typography>
+          <Skeleton variant="text" width={120} height={24} animation="wave" />
+        </Box>
+        
+        <Divider />
+        
+        {/* Editar Skeleton */}
+        <Box sx={{ 
+          p: 1.5,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="body2" sx={{ color: '#666' }}>
+            Ajustar reserva
+          </Typography>
+          <Skeleton variant="text" width={60} height={24} animation="wave" />
+        </Box>
+      </Box>
+    );
+  }
+
   const formattedDate = DateService.formatDisplay(selectedDate);
   const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
-
   const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
   return (

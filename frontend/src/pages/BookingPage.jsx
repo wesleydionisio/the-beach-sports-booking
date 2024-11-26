@@ -133,6 +133,7 @@ const BookingPage = () => {
   const [bookings, setBookings] = useState([]);
   const [selectedRecurrence, setSelectedRecurrence] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [loadingStep2, setLoadingStep2] = useState(false);
 
   const horarioInicio = 8;
   const horarioFim = 22;
@@ -269,6 +270,22 @@ const BookingPage = () => {
   // Atualizar handleConfirmReservation para salvar todos os dados necessários
   const handleConfirmReservation = async () => {
     try {
+      // Verificar se o usuário está logado
+      if (!user) {
+        // Salvar dados da reserva atual no localStorage
+        localStorage.setItem('pendingBooking', JSON.stringify({
+          quadraId,
+          selectedDate: selectedDate?.format('YYYY-MM-DD'),
+          selectedSport: selectedSport?._id,
+          selectedTimeSlot: selectedTimeSlot,
+          selectedPaymentMethod: selectedPaymentMethod?._id
+        }));
+
+        // Redirecionar para o login com o parâmetro de redirecionamento
+        navigate(`/login?redirect=/booking/${quadraId}`);
+        return;
+      }
+
       console.log('DEBUG - Estado completo antes da confirmação:', {
         selectedTimeSlot,
         selectedSlot,
@@ -353,7 +370,9 @@ const BookingPage = () => {
       }
     } catch (error) {
       console.error('Erro ao criar reserva:', error);
-      alert('Erro ao criar reserva. Por favor, verifique os dados.');
+      enqueueSnackbar('Erro ao criar reserva. Por favor, tente novamente.', { 
+        variant: 'error' 
+      });
     }
   };
   
@@ -525,6 +544,20 @@ const BookingPage = () => {
   useEffect(() => {
 
   }, [selectedSport, selectedTimeSlot, selectedSlot]);
+
+  // Modifique a função que muda o step
+  const handleStepChange = (newStep) => {
+    if (newStep === 2) {
+      setLoadingStep2(true);
+      setBookingStep(2);
+      // Simular um pequeno delay para mostrar o loading
+      setTimeout(() => {
+        setLoadingStep2(false);
+      }, 800);
+    } else {
+      setBookingStep(newStep);
+    }
+  };
 
   return (
     <>
@@ -753,6 +786,7 @@ const BookingPage = () => {
                         selectedDate={selectedDate}
                         onDateChange={handleDateChange}
                         quadraId={quadraId}
+                        loading={loadingStep2}
                       />
                     </Box>
 
@@ -786,7 +820,7 @@ const BookingPage = () => {
                       variant="contained"
                       fullWidth
                       disabled={!selectedDate || !selectedSlot}
-                      onClick={() => setBookingStep(2)}
+                      onClick={() => handleStepChange(2)}
                       sx={confirmButtonStyles}
                     >
                       <Box sx={{ 
@@ -852,7 +886,9 @@ const BookingPage = () => {
                     selectedDate={selectedDate}
                     selectedSlot={selectedSlot}
                     court={court}
-                    onEdit={() => setBookingStep(1)}
+                    onEdit={() => handleStepChange(1)}
+                    loading={loadingStep2}
+                    recorrencia={selectedRecurrence}
                   />
                   
                   {/* Seleão de Esporte e Pagamento */}
@@ -878,6 +914,7 @@ const BookingPage = () => {
                           sports={court?.esportes_permitidos || []}
                           selectedSport={selectedSport}
                           onSportSelect={setSelectedSport}
+                          loading={loadingStep2}
                         />
                       </Box>
                     </Grid>
@@ -890,6 +927,7 @@ const BookingPage = () => {
                         <PaymentButtons
                           selectedPayment={selectedPayment}
                           onPaymentSelect={handlePaymentSelect}
+                          loading={loadingStep2}
                         />
                       </Box>
                     </Grid>
@@ -905,32 +943,44 @@ const BookingPage = () => {
                       Opções adicionais:
                     </Typography>
                     
-                    <Button
-                      variant={selectedRecurrence ? "contained" : "outlined"}
-                      onClick={() => setRecurrenceModalOpen(true)}
-                      startIcon={<AccessTimeIcon />}
-                      sx={{
-                        height: 40,
-                        textTransform: 'none',
-                        fontSize: '1rem',
-                        ...(selectedRecurrence && {
-                          backgroundColor: 'primary.main',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: 'primary.dark',
-                          }
-                        })
-                      }}
-                    >
-                      {selectedRecurrence 
-                        ? `Horário Fixo - ${selectedRecurrence.tipo} ${selectedRecurrence.tipo === 1 ? 'mês' : 'meses'}`
-                        : 'Agendar Horário Fixo'
-                      }
-                    </Button>
+                    {loadingStep2 ? (
+                      <Skeleton 
+                        variant="rounded" 
+                        width={250}
+                        height={40}
+                        animation="wave"
+                        sx={{ bgcolor: 'rgba(0, 0, 0, 0.08)' }}
+                      />
+                    ) : (
+                      <Button
+                        variant={selectedRecurrence ? "contained" : "outlined"}
+                        onClick={() => setRecurrenceModalOpen(true)}
+                        startIcon={<AccessTimeIcon />}
+                        disabled={!selectedSport}
+                        sx={{
+                          height: 40,
+                          textTransform: 'none',
+                          fontSize: '1rem',
+                          width: 'fit-content',
+                          ...(selectedRecurrence && {
+                            backgroundColor: 'primary.main',
+                            color: 'white',
+                            '&:hover': {
+                              backgroundColor: 'primary.dark',
+                            }
+                          })
+                        }}
+                      >
+                        {selectedRecurrence 
+                          ? `Horário Fixo - ${selectedRecurrence.tipo} ${selectedRecurrence.tipo === 1 ? 'mês' : 'meses'}`
+                          : 'Agendar Horário Fixo'
+                        }
+                      </Button>
+                    )}
 
                     <RecurrenceModal
                       open={recurrenceModalOpen}
-                      onClose={() => setRecurrenceModalOpen(false)}
+                      onClose={() => setRecurrenceModalOpen(false)} 
                       selectedSlot={{
                         data: selectedDate,
                         esporte: selectedSport?._id,

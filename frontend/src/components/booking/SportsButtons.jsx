@@ -1,6 +1,6 @@
 // src/components/booking/SportsButtons.jsx
 import React, { useEffect, useState } from 'react';
-import { Box, Button, CircularProgress } from '@mui/material';
+import { Box, Button, CircularProgress, Skeleton } from '@mui/material';
 import axios from '../../api/apiService';
 import SportsIcon from '@mui/icons-material/Sports';
 import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
@@ -17,9 +17,8 @@ const SPORT_ICONS = {
   'default': SportsIcon
 };
 
-const SportsButtons = ({ onSportSelect, selectedSport }) => {
+const SportsButtons = ({ onSportSelect, selectedSport, loading = false }) => {
   const [sports, setSports] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [icons, setIcons] = useState({});
 
   const sanitizeSvg = async (url) => {
@@ -80,8 +79,6 @@ const SportsButtons = ({ onSportSelect, selectedSport }) => {
           { _id: '4', name: 'Tênis', active: true }
         ];
         setSports(defaultSports);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -98,6 +95,33 @@ const SportsButtons = ({ onSportSelect, selectedSport }) => {
     onSportSelect(sport);
   };
 
+  if (loading) {
+    return (
+      <Box>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 2 
+        }}>
+          {[1, 2, 3, 4].map((index) => (
+            <Skeleton
+              key={index}
+              variant="rounded"
+              sx={{
+                height: 40,
+                width: 120,
+                bgcolor: 'rgba(0, 0, 0, 0.08)',
+                borderRadius: 1
+              }}
+              animation="wave"
+            />
+          ))}
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <Box sx={{ 
@@ -106,87 +130,83 @@ const SportsButtons = ({ onSportSelect, selectedSport }) => {
         flexWrap: 'wrap',
         gap: 2 
       }}>
-        {loading ? (
-          <CircularProgress />
-        ) : (
-          sports.map((sport) => {
-            const isSelected = selectedSport?._id === sport._id;
-            
-            const iconBox = (IconComponent) => (
-              <Box
-                component="span"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: isSelected ? 'transparent' : blue[500],
-                  borderRadius: '4px 0 0 4px',
-                  minWidth: 48,
-                  height: '100%',
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                }}
-              >
-                {IconComponent}
-              </Box>
-            );
+        {sports.map((sport) => {
+          const isSelected = selectedSport?._id === sport._id;
+          
+          const iconBox = (IconComponent) => (
+            <Box
+              component="span"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: isSelected ? 'transparent' : blue[500],
+                borderRadius: '4px 0 0 4px',
+                minWidth: 48,
+                height: '100%',
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+              }}
+            >
+              {IconComponent}
+            </Box>
+          );
 
-            return (
-              <Button
-                key={sport._id}
-                variant={isSelected ? "contained" : "outlined"}
-                color="primary"
-                onClick={() => handleSportSelect(sport)}
+          return (
+            <Button
+              key={sport._id}
+              variant={isSelected ? "contained" : "outlined"}
+              color="primary"
+              onClick={() => handleSportSelect(sport)}
+              sx={{ 
+                height: 40,
+                p: 0,
+                pl: 6,
+                pr: 2,
+                position: 'relative',
+                overflow: 'hidden',
+                '& .MuiButton-startIcon': {
+                  display: 'none'
+                }
+              }}
+            >
+              {icons[sport.nome] ? 
+                iconBox(
+                  <img 
+                    src={icons[sport.nome]} 
+                    alt={sport.nome}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      filter: 'brightness(0) invert(1)'
+                    }}
+                  />
+                ) : 
+                iconBox(
+                  <Box sx={{
+                    '& .MuiSvgIcon-root': {
+                      color: isSelected ? 'inherit' : 'white',
+                      fontSize: 24
+                    }
+                  }}>
+                    {getFallbackIcon(sport.nome)}
+                  </Box>
+                )
+              }
+              <Box 
+                component="span" 
                 sx={{ 
-                  height: 40,
-                  p: 0,
-                  pl: 6,
-                  pr: 2,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  '& .MuiButton-startIcon': {
-                    display: 'none'
-                  }
+                  ml: 2,
+                  mr: 1
                 }}
               >
-                {icons[sport.nome] ? 
-                  iconBox(
-                    <img 
-                      src={icons[sport.nome]} 
-                      alt={sport.nome}
-                      style={{
-                        width: 24,
-                        height: 24,
-                        filter: 'brightness(0) invert(1)'
-                      }}
-                    />
-                  ) : 
-                  iconBox(
-                    <Box sx={{
-                      '& .MuiSvgIcon-root': {
-                        color: isSelected ? 'inherit' : 'white',
-                        fontSize: 24
-                      }
-                    }}>
-                      {getFallbackIcon(sport.nome)}
-                    </Box>
-                  )
-                }
-                <Box 
-                  component="span" 
-                  sx={{ 
-                    ml: 2,
-                    mr: 1
-                  }}
-                >
-                  {sport.nome}
-                </Box>
-              </Button>
-            );
-          })
-        )}
+                {sport.nome}
+              </Box>
+            </Button>
+          );
+        })}
       </Box>
     </Box>
   );

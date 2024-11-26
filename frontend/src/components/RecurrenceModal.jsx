@@ -125,7 +125,6 @@ const RecurrenceModal = ({
       setLoading(true);
       setError('');
 
-      // Apenas preparar os dados e retornar para o componente pai
       const recurrenceData = {
         dates: previewDates
           .filter(date => date.disponivel)
@@ -295,7 +294,7 @@ const RecurrenceModal = ({
         <Button 
           onClick={handleConfirm}
           variant="contained" 
-          disabled={loading || !selectedPayment}
+          disabled={loading || !selectedOption}
           color="primary"
         >
           {loading ? <CircularProgress size={24} /> : 'Confirmar'}

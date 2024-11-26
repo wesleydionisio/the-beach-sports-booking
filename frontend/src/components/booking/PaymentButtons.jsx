@@ -1,13 +1,13 @@
 // src/components/booking/PaymentButtons.jsx
 import React, { useEffect, useState } from 'react';
-import { Box, Button, CircularProgress, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Typography, Skeleton } from '@mui/material';
 import axios from '../../api/apiService';
 import PaymentIcon from '@mui/icons-material/Payment';
 import { blue, red, purple, indigo } from '@mui/material/colors';
 
-const PaymentButtons = ({ onPaymentSelect, selectedPayment }) => {
+const PaymentButtons = ({ onPaymentSelect, selectedPayment, loading = false }) => {
   const [paymentMethods, setPaymentMethods] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   const [icons, setIcons] = useState({});
 
   const sanitizeSvg = async (url) => {
@@ -61,12 +61,40 @@ const PaymentButtons = ({ onPaymentSelect, selectedPayment }) => {
       } catch (error) {
         console.error('Erro ao carregar métodos de pagamento:', error);
       } finally {
-        setLoading(false);
+        setLoadingData(false);
       }
     };
 
     fetchPaymentMethods();
   }, []);
+
+  // Componente de Skeleton
+  if (loading) {
+    return (
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 2 
+        }}>
+          {[1, 2, 3].map((index) => (
+            <Skeleton
+              key={index}
+              variant="rounded"
+              sx={{
+                height: 40,
+                width: 140,
+                bgcolor: 'rgba(0, 0, 0, 0.08)',
+                borderRadius: 1
+              }}
+              animation="wave"
+            />
+          ))}
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -76,7 +104,7 @@ const PaymentButtons = ({ onPaymentSelect, selectedPayment }) => {
         flexWrap: 'wrap',
         gap: 2 
       }}>
-        {loading ? (
+        {loadingData ? (
           <CircularProgress />
         ) : (
           paymentMethods.map((method) => {

@@ -22,160 +22,160 @@ import {
   Select,
   MenuItem,
   Chip,
+  Skeleton,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/apiService';
 import { useSnackbar } from 'notistack';
 
 const PerfilPage = () => {
-  const { user, setUser, login, register, logout } = useContext(AuthContext);
+  const { user, setUser, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
 
-  // Verificar autenticação e redirecionar
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (!token || !user) {
-      console.log('Usuário não autenticado, redirecionando para login...');
-      navigate('/login');
-      return;
-    }
-  }, [user, navigate]);
-
+  // Estados
   const [profileData, setProfileData] = useState({
     nome: '',
     email: '',
     telefone: '',
-    // Adicione outros campos conforme necessário
   });
-
   const [reservations, setReservations] = useState([]);
-
   const [editing, setEditing] = useState(false);
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [loading, setLoading] = useState(true);
 
-  // Estados para o formulário de login/cadastro
-  const [activeTab, setActiveTab] = useState(0); // 0: Login, 1: Cadastro
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: '',
-  });
-  const [registerData, setRegisterData] = useState({
-    nome: '',
-    email: '',
-    password: '',
-    telefone: '',
-    // Adicione outros campos conforme necessário
-  });
-
-  // Estado para controle de ordenação
-  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' para mais recente, 'asc' para mais antiga
-
+  // Verificar autenticação
   useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token || !user) {
+      console.log('🔒 Usuário não autenticado, redirecionando...');
+      navigate('/login?redirect=/perfil');
+      return;
+    }
+    
+    // Inicializar dados do perfil
     if (user) {
       setProfileData({
         nome: user.nome || '',
         email: user.email || '',
         telefone: user.telefone || '',
-        // Preencha outros campos conforme necessário
       });
       fetchReservations();
     }
-    // eslint-disable-next-line
-  }, [user]);
+  }, [user, navigate]);
 
-  // Função para buscar as reservas do usuário
+  // Buscar reservas do usuário
   const fetchReservations = async () => {
     try {
-      const response = await axios.get('/bookings/user'); // Certifique-se de que a URL está correta
-      console.log('Reservas recebidas:', response.data.reservas); // Adicionado para depuração
+      setLoading(true);
+      console.log('📚 Buscando reservas do usuário...');
+      
+      const response = await axios.get('/bookings/user');
+      
       if (response.data.success) {
+        console.log('✅ Reservas carregadas:', response.data.reservas.length);
         setReservations(response.data.reservas);
       } else {
         enqueueSnackbar('Não foi possível carregar suas reservas.', { variant: 'error' });
       }
     } catch (error) {
-      console.error('Erro ao buscar reservas:', error);
+      console.error('❌ Erro ao buscar reservas:', error);
       enqueueSnackbar('Erro ao buscar reservas. Tente novamente.', { variant: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Função para lidar com a edição dos campos do perfil
-  const handleChangeProfile = (e) => {
-    setProfileData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  // Função para salvar as alterações do perfil
+  // Atualizar perfil
   const handleSave = async () => {
     try {
-      const response = await axios.put('/auth/profile', profileData); // Corrigir a rota para /auth/profile
+      console.log('💾 Salvando alterações do perfil...');
+      
+      const response = await axios.put('/auth/profile', profileData);
+      
       if (response.data.success) {
+        console.log('✅ Perfil atualizado com sucesso');
         enqueueSnackbar('Perfil atualizado com sucesso.', { variant: 'success' });
         setEditing(false);
-        // Atualizar o usuário no contexto
         setUser(response.data.user);
       } else {
         enqueueSnackbar('Não foi possível atualizar o perfil.', { variant: 'error' });
       }
     } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
+      console.error('❌ Erro ao atualizar perfil:', error);
       enqueueSnackbar('Erro ao atualizar perfil. Tente novamente.', { variant: 'error' });
     }
   };
 
-  // Função para lidar com logout
-  const handleLogout = () => {
-    // Chamar a função de logout do contexto
-    logout();
-    navigate('/'); // Redirecionar para a página inicial
-  };
-
-  // Funções para lidar com o formulário de login
-  const handleChangeLogin = (e) => {
-    setLoginData(prev => ({
+  // Função para lidar com mudanças nos campos do perfil
+  const handleChangeProfile = (event) => {
+    const { name, value } = event.target;
+    setProfileData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [name]: value
     }));
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    const { email, password } = loginData;
-    const result = await login(email, password);
-    if (result.success) {
-      enqueueSnackbar('Login realizado com sucesso.', { variant: 'success' });
-      navigate('/perfil'); // Redirecionar para a página de perfil
-    } else {
-      enqueueSnackbar(result.message || 'Erro no login.', { variant: 'error' });
+  // Função para fazer logout
+  const handleLogout = async () => {
+    try {
+      console.log('👋 Iniciando processo de logout...');
+      await logout(); // Usando a função logout do AuthContext
+      
+      // Limpar dados locais
+      setProfileData({
+        nome: '',
+        email: '',
+        telefone: ''
+      });
+      setReservations([]);
+      
+      // Redirecionar para a página inicial
+      navigate('/');
+      enqueueSnackbar('Logout realizado com sucesso!', { variant: 'success' });
+    } catch (error) {
+      console.error('❌ Erro ao fazer logout:', error);
+      enqueueSnackbar('Erro ao fazer logout. Tente novamente.', { variant: 'error' });
     }
   };
 
-  // Funções para lidar com o formulário de cadastro
-  const handleChangeRegister = (e) => {
-    setRegisterData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    const { nome, email, password, telefone } = registerData;
-    const result = await register({ nome, email, password, telefone });
-    if (result.success) {
-      enqueueSnackbar('Cadastro realizado com sucesso.', { variant: 'success' });
-      navigate('/perfil'); // Redirecionar para a página de perfil
-    } else {
-      enqueueSnackbar(result.message || 'Erro no cadastro.', { variant: 'error' });
-    }
-  };
-
-  // Função para renderizar os cards de reservas com filtro e labels de status
+  // Renderizar cards de reservas
   const renderReservations = () => {
+    if (loading) {
+      return (
+        <Grid container spacing={2}>
+          {[1, 2, 3].map((skeleton) => (
+            <Grid item xs={12} sm={6} md={4} key={skeleton}>
+              <Skeleton variant="rectangular" height={380} />
+            </Grid>
+          ))}
+        </Grid>
+      );
+    }
+
     if (reservations.length === 0) {
-      return <Typography variant="body1">Você não possui reservas.</Typography>;
+      return (
+        <Box 
+          sx={{ 
+            textAlign: 'center', 
+            py: 4,
+            backgroundColor: 'background.paper',
+            borderRadius: 1
+          }}
+        >
+          <Typography variant="body1" color="text.secondary">
+            Você ainda não possui reservas.
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate('/quadras')}
+            sx={{ mt: 2 }}
+          >
+            Fazer uma Reserva
+          </Button>
+        </Box>
+      );
     }
 
     // Ordenar as reservas com base no sortOrder
@@ -324,15 +324,15 @@ const PerfilPage = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 5, mb: 5 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Paper sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>
           Meu Perfil
         </Typography>
 
         {/* Formulário de Perfil */}
         <Box component="form" noValidate autoComplete="off">
-          <Grid container spacing={2}>
+          <Grid container spacing={3}>
             {/* Nome */}
             <Grid item xs={12} sm={6}>
               <TextField
@@ -375,8 +375,6 @@ const PerfilPage = () => {
                 }}
               />
             </Grid>
-
-            {/* Outros campos podem ser adicionados aqui */}
           </Grid>
 
           {/* Botões de Ação */}

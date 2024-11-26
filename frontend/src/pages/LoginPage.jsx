@@ -1,5 +1,5 @@
 // src/pages/LoginPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   Container,
   Typography,
@@ -10,8 +10,9 @@ import {
   Tab,
 } from '@mui/material';
 import axios from '../api/apiService'; // Serviço de API
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PageContainer from '../components/layout/PageContainer';
+import { AuthContext } from '../context/AuthContext'; // Importar AuthContext
 
 const LoginPage = () => {
   const [tab, setTab] = useState(0); // Tab 0 = Login, Tab 1 = Criar Conta
@@ -24,10 +25,23 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false); // Estado para carregamento
   const [error, setError] = useState(''); // Estado para erros
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTo = searchParams.get('redirect');
+  const { setUser } = useContext(AuthContext); // Adicionar contexto
 
   // Função auxiliar para verificar e processar redirecionamento
   const handleRedirectAfterAuth = () => {
     console.log('🔍 Verificando redirecionamento após autenticação...');
+    
+    // Primeiro verificar se há um redirectTo na URL
+    if (redirectTo) {
+      console.log('➡️ Redirecionando para:', redirectTo);
+      navigate(redirectTo);
+      return;
+    }
+
+    // Se não houver redirectTo, verificar pendingBooking
     const pendingBookingStr = localStorage.getItem('pendingBooking');
     
     if (pendingBookingStr) {
@@ -38,7 +52,7 @@ const LoginPage = () => {
         if (bookingData.quadraId) {
           console.log('🔄 Redirecionando para booking:', `/booking/${bookingData.quadraId}`);
           navigate(`/booking/${bookingData.quadraId}`);
-          return true;
+          return;
         }
       } catch (error) {
         console.error('❌ Erro ao processar dados pendentes:', error);
@@ -46,9 +60,9 @@ const LoginPage = () => {
       }
     }
     
-    console.log('➡️ Nenhuma reserva pendente, redirecionando para perfil');
-    navigate('/perfil');
-    return false;
+    // Se não houver redirecionamento específico, ir para a página inicial
+    console.log('➡️ Redirecionando para página inicial');
+    navigate('/');
   };
 
   const handleTabChange = (event, newValue) => {
@@ -76,6 +90,9 @@ const LoginPage = () => {
       if (response.data.success) {
         console.log('✅ Login realizado com sucesso');
         localStorage.setItem('authToken', response.data.token);
+        
+        // Atualizar o contexto com os dados do usuário
+        setUser(response.data.user);
         
         // Aguardar um momento para garantir que o token foi salvo
         setTimeout(() => {
@@ -113,6 +130,9 @@ const LoginPage = () => {
 
         if (loginResponse.data.success) {
           localStorage.setItem('authToken', loginResponse.data.token);
+          
+          // Atualizar o contexto com os dados do usuário
+          setUser(loginResponse.data.user);
           
           // Aguardar um momento para garantir que o token foi salvo
           setTimeout(() => {

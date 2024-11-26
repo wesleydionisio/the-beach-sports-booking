@@ -1,7 +1,8 @@
 // src/components/booking/TimeSlots.jsx
 import React from 'react';
-import { Box, Button, Typography, Stack, Skeleton, Fade } from '@mui/material';
+import { Box, Button, Typography, Stack, Fade, Skeleton } from '@mui/material';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import StandardSkeleton from '../common/StandardSkeleton';
 import { keyframes } from '@mui/system';
 
 // Keyframe para animação de entrada em cadeia
@@ -16,22 +17,17 @@ const fadeInUp = keyframes`
   }
 `;
 
-const TimeSlotSkeleton = () => (
-  <Fade in timeout={300}>
-    <Stack spacing={1} sx={{ p: 1 }}>
-      {[...Array(8)].map((_, index) => (
-        <Box
-          key={index}
-          sx={{
-            p: 2,
-            borderRadius: 1,
-            border: '1px solid #f1f1f1',
-            backgroundColor: 'rgba(0, 0, 0, 0.04)',
-            animation: `${fadeInUp} 0.3s ease-out forwards`,
-            animationDelay: `${index * 0.05}s`,
-            opacity: 0,
-          }}
-        >
+const TimeSlots = ({ slots, onSlotSelect, selectedSlot, loading = false }) => {
+  const handleSlotClick = (slot) => {
+    onSlotSelect(slot);
+  };
+
+  if (loading) {
+    return (
+      <StandardSkeleton 
+        items={8}
+        height={64} // Altura ajustada para match com os slots reais
+        customContent={() => (
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center',
@@ -67,36 +63,9 @@ const TimeSlotSkeleton = () => (
               />
             </Box>
           </Box>
-        </Box>
-      ))}
-    </Stack>
-  </Fade>
-);
-
-const TimeSlots = ({ slots, onSlotSelect, selectedSlot, loading = false }) => {
-  const handleSlotClick = (slot) => {
-    onSlotSelect(slot);
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ 
-        height: '100%', 
-        maxHeight: '343px',
-        overflow: 'auto',
-        '&::-webkit-scrollbar': { width: '8px' },
-        '&::-webkit-scrollbar-track': {
-          background: '#f1f1f1',
-          borderRadius: '4px',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          background: '#888',
-          borderRadius: '4px',
-          '&:hover': { background: '#666' },
-        },
-      }}>
-        <TimeSlotSkeleton />
-      </Box>
+        )}
+        maxHeight="343px"
+      />
     );
   }
 
@@ -106,15 +75,10 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot, loading = false }) => {
         height: '100%', 
         maxHeight: '343px',
         overflow: 'auto',
-        '&::-webkit-scrollbar': { width: '8px' },
-        '&::-webkit-scrollbar-track': {
-          background: '#f1f1f1',
-          borderRadius: '4px',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          background: '#888',
-          borderRadius: '4px',
-          '&:hover': { background: '#666' },
+        msOverflowStyle: 'none', // IE e Edge
+        scrollbarWidth: 'none',   // Firefox
+        '&::-webkit-scrollbar': { 
+          display: 'none'  // Chrome, Safari e Opera
         },
       }}>
         {(!slots || slots.length === 0) ? (
@@ -122,7 +86,9 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot, loading = false }) => {
             Nenhum horário disponível para esta data
           </Typography>
         ) : (
-          <Stack spacing={1} sx={{ p: 1 }}>
+          <Stack spacing={1} sx={{ 
+            p: { xs: 0, sm: 1 } // Remove padding no mobile
+          }}>
             {slots.map((slot, index) => {
               const isSelected = selectedSlot && 
                                selectedSlot.horario_inicio === slot.horario_inicio;
@@ -152,8 +118,10 @@ const TimeSlots = ({ slots, onSlotSelect, selectedSlot, loading = false }) => {
                     border: isSelected 
                       ? 'none' 
                       : '1px solid #f1f1f1',
-                    borderRadius: 1,
+                    borderRadius: { xs: 0, sm: 1 }, // Remove border radius no mobile
                     textTransform: 'none',
+                    width: { xs: '100%', sm: '100%' }, // Full width no mobile
+                    mx: { xs: -2, sm: 0 }, // Compensa o padding do container no mobile
                     '&:hover': {
                       backgroundColor: !slot.disponivel 
                         ? '#f5f5f5'

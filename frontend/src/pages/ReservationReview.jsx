@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Skeleton,
 } from '@mui/material';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -28,6 +29,19 @@ import SectionLabel from '../components/common/SectionLabel';
 import SportLabel from '../components/common/SportLabel';
 import DateService from '../utils/dateService';
 import dayjs from 'dayjs';
+import { keyframes } from '@mui/system';
+
+// Definir a animação fadeInUp
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
 
 const ReservationReview = () => {
   const { reservationId } = useParams();
@@ -300,9 +314,72 @@ const ReservationReview = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
-      </Box>
+      <PageContainer withHeader={true}>
+        <Box sx={{ maxWidth: 800, mx: 'auto', p: 2 }}>
+          <Paper 
+            sx={{ 
+              overflow: 'hidden',
+              animation: `${fadeInUp} 0.3s ease-out forwards`,
+              opacity: 0
+            }}
+          >
+            {/* Header Skeleton */}
+            <Box sx={{ p: 2, bgcolor: 'primary.main' }}>
+              <Skeleton 
+                variant="text" 
+                width={200} 
+                height={40} 
+                sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+                animation="wave"
+              />
+            </Box>
+
+            {/* Horário e Status Skeleton */}
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Skeleton variant="text" width={80} height={24} animation="wave" />
+                  <Skeleton variant="text" width={120} height={32} animation="wave" />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Skeleton variant="rounded" width={100} height={32} animation="wave" />
+                    <Skeleton variant="rounded" width={120} height={32} animation="wave" />
+                    <Skeleton variant="rounded" width={100} height={32} animation="wave" />
+                  </Box>
+                </Grid>
+              </Grid>
+            </Paper>
+
+            {/* Imagem Skeleton */}
+            <Skeleton 
+              variant="rectangular" 
+              width="100%" 
+              height={200}
+              animation="wave"
+              sx={{ bgcolor: 'rgba(0,0,0,0.1)' }}
+            />
+
+            {/* Pagamento Skeleton */}
+            <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+              <Skeleton variant="text" width={120} height={24} animation="wave" />
+              <Skeleton variant="text" width={150} height={32} animation="wave" />
+              <Box sx={{ mt: 2 }}>
+                <Skeleton variant="text" width={140} height={24} animation="wave" />
+                <Skeleton variant="text" width={100} height={32} animation="wave" />
+              </Box>
+            </Box>
+
+            {/* Botões Skeleton */}
+            <Paper sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Skeleton variant="rounded" width="50%" height={40} animation="wave" />
+                <Skeleton variant="rounded" width="50%" height={40} animation="wave" />
+              </Box>
+            </Paper>
+          </Paper>
+        </Box>
+      </PageContainer>
     );
   }
 
