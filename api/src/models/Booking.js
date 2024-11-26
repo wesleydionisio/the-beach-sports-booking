@@ -74,6 +74,14 @@ const BookingSchema = new mongoose.Schema({
   recorrencia: {
     type: RecorrenciaSchema,
     default: { horarios: [] }
+  },
+  payment_id: {
+    type: String
+  },
+  payment_status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', 'cancelled'],
+    default: 'pending'
   }
 }, { timestamps: true });
 

@@ -17,7 +17,7 @@ const UserSchema = new mongoose.Schema({
   },
   senha: {
     type: String,
-    required: [true, 'Senha é obrigatória'],
+    required: true,
     select: false
   },
   telefone: {
@@ -55,14 +55,11 @@ UserSchema.pre('save', async function(next) {
 // Método para comparar senhas
 UserSchema.methods.comparePassword = async function(candidatePassword) {
   try {
-    console.log('Comparando senhas:');
-    console.log('Senha fornecida (hash):', await bcrypt.hash(candidatePassword, 10));
-    console.log('Senha armazenada:', this.senha);
-    
-    const isMatch = await bcrypt.compare(candidatePassword, this.senha);
-    console.log('Resultado da comparação:', isMatch);
-    
-    return isMatch;
+    const user = await this.model('User').findOne({ _id: this._id }).select('+senha');
+    if (!user || !user.senha) {
+      throw new Error('Senha não encontrada');
+    }
+    return await bcrypt.compare(candidatePassword, user.senha);
   } catch (error) {
     console.error('Erro ao comparar senhas:', error);
     throw error;

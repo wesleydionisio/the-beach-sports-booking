@@ -16,6 +16,8 @@ const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const sportRoutes = require('./routes/sportRoutes'); // Nova importação
+const paymentRoutes = require('./routes/payment.routes');
+const adminRoutes = require('./routes/admin');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -44,6 +46,8 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/payment-methods', paymentMethodRoutes);
 app.use('/api/business-config', businessConfigRoutes);
 app.use('/api/sports', sportRoutes); // Nova rota
+app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Middleware de erros (deve estar após as rotas)
 app.use(errorHandler);

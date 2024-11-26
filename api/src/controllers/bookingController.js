@@ -14,6 +14,7 @@ const timezone = require('dayjs/plugin/timezone');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const DateService = require('../utils/dateService');
 const RecurrenceService = require('../services/RecurrenceService');
+const MercadoPagoService = require('../services/MercadoPagoService');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -136,12 +137,32 @@ exports.createBooking = async (req, res) => {
       horario_fim,
       esporte,
       metodo_pagamento,
-      total
+      total,
+      status: metodo_pagamento === 'pix' ? 'pendente' : 'confirmada'
     });
 
     await booking.save();
     
     console.log('3. Reserva criada com sucesso:', booking);
+
+    // Se for PIX, gerar o QR Code
+    if (metodo_pagamento === 'pix') {
+      const pixData = await MercadoPagoService.createPixPayment({
+        total,
+        quadra_nome: booking.quadra_id.nome,
+        usuario_email: req.user.email,
+        documento_tipo: req.user.documento_tipo,
+        documento_numero: req.user.documento_numero
+      });
+
+      // Atualizar a reserva com os dados do PIX
+      booking.pagamento_dados = {
+        pix_qr_code: pixData.qr_code,
+        pix_qr_code_text: pixData.qr_code_text,
+        payment_id: pixData.payment_id
+      };
+      await booking.save();
+    }
 
     res.status(201).json({
       success: true,
@@ -790,5 +811,33 @@ exports.getBookingPublic = async (req, res) => {
       success: false,
       message: 'Erro ao buscar reserva.'
     });
+  }
+};
+
+// Novo endpoint para verificar status do pagamento
+exports.checkPaymentStatus = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const booking = await Booking.findById(bookingId);
+    
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Reserva não encontrada' });
+    }
+
+    if (booking.pagamento_dados?.payment_id) {
+      const status = await MercadoPagoService.checkPaymentStatus(booking.pagamento_dados.payment_id);
+      
+      if (status === 'approved') {
+        booking.status = 'confirmada';
+        await booking.save();
+      }
+
+      return res.json({ success: true, status });
+    }
+
+    res.json({ success: false, message: 'Pagamento não encontrado' });
+  } catch (error) {
+    console.error('Erro ao verificar status:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

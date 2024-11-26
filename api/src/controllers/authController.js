@@ -103,70 +103,53 @@ const register = async (req, res) => {
  */
 const login = async (req, res) => {
   try {
-    console.log('Dados recebidos:', req.body); // Log dos dados recebidos
-
-    // Validar os dados de entrada
-    const { error } = userLoginSchema.validate(req.body);
-    if (error) {
-      console.log('Erro de validação:', error.details[0].message);
-      return res.status(400).json({
-        success: false,
-        message: error.details[0].message
-      });
-    }
-
     const { email, senha } = req.body;
 
-    // Verificar se o usuário existe
-    const user = await User.findOne({ email: email.toLowerCase() });
-    console.log('Usuário encontrado:', user ? 'Sim' : 'Não'); // Log do resultado da busca
-
+    // Buscar usuário incluindo o campo senha
+    const user = await User.findOne({ email }).select('+senha');
     if (!user) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
         message: 'Email ou senha inválidos'
       });
     }
 
-    // Verificar a senha
     const isMatch = await user.comparePassword(senha);
-    console.log('Senha corresponde:', isMatch ? 'Sim' : 'Não'); // Log do resultado da comparação
-
     if (!isMatch) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
         message: 'Email ou senha inválidos'
       });
     }
 
-    // Gerar token
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET || 'secretkey',
-      { expiresIn: '24h' }
-    );
-
-    // Log do sucesso
-    console.log('Login bem-sucedido para:', user.email);
-
+    const token = generateToken(user._id);
+    
     res.status(200).json({
       success: true,
       token,
       user: {
         id: user._id,
         nome: user.nome,
-        email: user.email
+        email: user.email,
+        role: user.role
       }
     });
-
   } catch (error) {
-    console.error('Erro detalhado no login:', error);
+    console.error('Erro no login:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Erro ao realizar login'
     });
   }
+};
+
+// Adicione esta função de geração de token (geralmente usa-se jwt)
+const generateToken = (userId) => {
+  return jwt.sign(
+    { id: userId },
+    process.env.JWT_SECRET, // Certifique-se de ter esta variável no seu .env
+    { expiresIn: '24h' } // ou o tempo que você preferir
+  );
 };
 
 module.exports = {

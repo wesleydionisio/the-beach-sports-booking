@@ -32,6 +32,7 @@ import dayjs from 'dayjs';
 import { keyframes } from '@mui/system';
 import { AuthContext } from '../context/AuthContext';
 import StandardSkeleton from '../components/common/StandardSkeleton';
+import PixPaymentModal from '../components/PixPaymentModal';
 
 // Definir a animação fadeInUp
 const fadeInUp = keyframes`
@@ -45,7 +46,7 @@ const fadeInUp = keyframes`
   }
 `;
 
-const ReservationReview = () => {
+const ReservationReview = ({ onClose }) => {
   const { user } = useContext(AuthContext);
   const { id } = useParams();
   const navigate = useNavigate();
@@ -56,6 +57,8 @@ const ReservationReview = () => {
   const [isCanceled, setIsCanceled] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(reservation?.status || 'pending');
 
   const fetchReservationDetails = async () => {
     try {
@@ -71,6 +74,12 @@ const ReservationReview = () => {
       if (response.data?.success) {
         const reservationData = response.data.reservation;
         
+        console.log('4. Dados do pagamento:', {
+          pagamento: reservationData.pagamento,
+          status: reservationData.status,
+          payment_status: reservationData.payment_status
+        });
+
         const formattedReservation = {
           ...reservationData,
           quadra: {
@@ -89,8 +98,25 @@ const ReservationReview = () => {
           )
         };
 
-        console.log('4. Dados formatados:', formattedReservation);
+        console.log('5. Dados formatados:', formattedReservation);
         setReservation(formattedReservation);
+
+        console.log('6. Condição do modal PIX:', {
+          isPix: reservationData.pagamento?.toUpperCase() === 'PIX',
+          isPending: reservationData.status === 'pendente',
+          isNotApproved: reservationData.payment_status !== 'approved',
+          shouldOpenModal: 
+            reservationData.pagamento?.toUpperCase() === 'PIX' && 
+            reservationData.status === 'pendente' &&
+            reservationData.payment_status !== 'approved'
+        });
+
+        if (reservationData.pagamento?.toUpperCase() === 'PIX' && 
+            reservationData.status === 'pendente' &&
+            reservationData.payment_status !== 'approved') {
+          console.log('7. Abrindo modal PIX');
+          setPixModalOpen(true);
+        }
       }
     } catch (error) {
       console.error('❌ ERRO:', error);
@@ -109,21 +135,23 @@ const ReservationReview = () => {
 
   useEffect(() => {
     if (reservation) {
-      console.log('5. Estado final da reserva:', {
-        quadra: {
-          id: reservation.quadra?.id,
-          nome: reservation.quadra?.nome,
-          imagem_url: reservation.quadra?.imagem_url,
-          completo: reservation.quadra
-        },
-        esporte: {
-          id: reservation.esporte?.id,
-          nome: reservation.esporte?.nome,
-          icon: reservation.esporte?.icon,
-          completo: reservation.esporte
-        },
-        dados_completos: reservation
-      });
+      console.log('9. Estado atual da reserva:', reservation);
+    }
+  }, [reservation]);
+
+  useEffect(() => {
+    console.log('8. Estado do modal PIX:', { pixModalOpen });
+  }, [pixModalOpen]);
+
+  useEffect(() => {
+    // Verifica se deve abrir o modal do PIX automaticamente
+    const shouldOpenPixModal = 
+      reservation?.pagamento === 'PIX' && 
+      reservation?.status === 'pending' &&
+      !pixModalOpen;
+    
+    if (shouldOpenPixModal) {
+      setPixModalOpen(true);
     }
   }, [reservation]);
 
@@ -440,6 +468,13 @@ const ReservationReview = () => {
       </Box>
     </PageContainer>
   );
+
+  const handlePaymentSuccess = () => {
+    setPaymentStatus('approved');
+    setPixModalOpen(false);
+    // Atualizar o estado da reserva se necessário
+    if (onClose) onClose();
+  };
 
   if (loading) {
     return renderLoadingSkeleton();
@@ -811,6 +846,13 @@ const ReservationReview = () => {
         </Dialog>
 
         {renderRecurrenceInfo()}
+
+        <PixPaymentModal 
+          open={pixModalOpen}
+          onClose={handlePaymentSuccess}
+          bookingId={id}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
       </Box>
     </PageContainer>
   );

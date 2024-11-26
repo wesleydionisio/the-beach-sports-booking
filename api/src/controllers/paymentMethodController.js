@@ -1,4 +1,5 @@
 const PaymentMethod = require('../models/PaymentMethod');
+const mercadoPagoService = require('../services/MercadoPagoService');
 
 // Listar todos os métodos de pagamento ativos
 exports.getPaymentMethods = async (req, res) => {
