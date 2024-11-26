@@ -6,32 +6,38 @@ const bcrypt = require('bcryptjs');
 const UserSchema = new mongoose.Schema({
   nome: {
     type: String,
-    required: [true, 'Nome é obrigatório'],
-    trim: true,
-    minlength: [3, 'Nome deve ter pelo menos 3 caracteres']
+    required: [true, 'Nome é obrigatório']
   },
   email: {
     type: String,
     required: [true, 'Email é obrigatório'],
     unique: true,
     lowercase: true,
-    trim: true,
-    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Email inválido']
+    trim: true
   },
   senha: {
     type: String,
     required: [true, 'Senha é obrigatória'],
-    minlength: [6, 'A senha deve ter pelo menos 6 caracteres']
+    select: false
   },
   telefone: {
     type: String,
     required: [true, 'Telefone é obrigatório'],
-    unique: true,
-    trim: true,
-    match: [/^\(\d{2}\)\s\d\s\d{4}-\d{4}$/, 'Formato de telefone inválido']
+    validate: {
+      validator: function(v) {
+        // Aceita apenas números, com 10 ou 11 dígitos
+        return /^[1-9]{2}[0-9]{8,9}$/.test(v);
+      },
+      message: props => `${props.value} não é um telefone válido! Use apenas números (DDD + número)`
+    }
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
   }
 }, {
-  timestamps: true // Adiciona createdAt e updatedAt automaticamente
+  timestamps: true
 });
 
 // Middleware para criptografar a senha antes de salvar

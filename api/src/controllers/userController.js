@@ -28,43 +28,67 @@ exports.getUserProfile = async (req, res) => {
 
 // Função para atualizar o perfil do usuário autenticado
 exports.updateUserProfile = async (req, res) => {
-  const { nome, email, telefone } = req.body;
-
   try {
-    // Verificar se o email já está em uso por outro usuário
+    const { nome, email, telefone } = req.body;
+    
+    console.log('📱 Dados recebidos para atualização:', { nome, email, telefone });
+
+    // Validar telefone antes de atualizar
+    if (telefone && !/^[1-9]{2}[0-9]{8,9}$/.test(telefone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Formato de telefone inválido. Use apenas números (DDD + número)'
+      });
+    }
+
+    // Verificar email duplicado
     if (email) {
-      const existingUser = await User.findOne({ email: email.toLowerCase(), _id: { $ne: req.user.id } });
+      const existingUser = await User.findOne({ 
+        email: email.toLowerCase(), 
+        _id: { $ne: req.user.id } 
+      });
+      
       if (existingUser) {
         return res.status(400).json({
           success: false,
-          message: 'O email já está em uso por outro usuário.',
+          message: 'Email já está em uso'
         });
       }
     }
 
-    // Encontrar o usuário e atualizar os campos permitidos
+    // Atualizar usuário
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { nome, email: email ? email.toLowerCase() : undefined, telefone },
-      { new: true, runValidators: true, context: 'query' }
+      { 
+        nome, 
+        email: email?.toLowerCase(), 
+        telefone 
+      },
+      { 
+        new: true, 
+        runValidators: true 
+      }
     ).select('-senha');
 
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        message: 'Usuário não encontrado.',
+        message: 'Usuário não encontrado'
       });
     }
 
+    console.log('✅ Perfil atualizado com sucesso:', updatedUser);
+
     res.status(200).json({
       success: true,
-      user: updatedUser,
+      user: updatedUser
     });
+    
   } catch (error) {
-    console.error('Erro ao atualizar perfil do usuário:', error);
+    console.error('❌ Erro ao atualizar perfil:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor.',
+      message: error.message || 'Erro ao atualizar perfil'
     });
   }
 };

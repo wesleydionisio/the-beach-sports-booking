@@ -326,70 +326,71 @@ exports.getBookingById = async (req, res) => {
   }
 };
 
-// Função para obter todas as reservas do usuário autenticado
+// Função para buscar reservas do usuário
 exports.getUserBookings = async (req, res) => {
   try {
-    console.log('1. Buscando reservas para usuário:', req.user.id);
-
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        success: false,
-        message: 'Usuário não autenticado'
-      });
+    const { page = 1, limit = 5, tipo = 'futuras' } = req.query;
+    const skip = (page - 1) * limit;
+    const now = new Date();
+    
+    let query = { usuario_id: req.user.id };
+    
+    // Se tipo for 'todas', não aplica filtro de data
+    if (tipo !== 'todas') {
+      const dateFilter = tipo === 'futuras' 
+        ? { data: { $gte: now } }
+        : { data: { $lt: now } };
+      query = { ...query, ...dateFilter };
     }
+    
+    // Para paginação
+    const reservas = await Booking.find(query)
+      .sort(tipo === 'futuras' ? { data: 1 } : { data: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate({
+        path: 'quadra_id',
+        select: 'nome foto_principal'
+      })
+      .populate('esporte', 'nome icon');
 
-    // Verificar se o ID é válido
-    if (!mongoose.Types.ObjectId.isValid(req.user.id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'ID de usuário inválido'
-      });
-    }
+    // Para métricas - buscar todas as reservas sem paginação
+    const todasReservas = await Booking.find({ usuario_id: req.user.id });
+    
+    // Calcular métricas
+    const metricas = {
+      totalRealizados: todasReservas.filter(r => r.status !== 'cancelada').length,
+      totalFuturos: todasReservas.filter(r => {
+        const dataReserva = new Date(r.data);
+        const horaInicio = r.horario_inicio.split(':').map(Number);
+        dataReserva.setHours(horaInicio[0], horaInicio[1], 0);
+        return dataReserva > now && r.status !== 'cancelada';
+      }).length,
+      horasPraticadas: todasReservas.filter(r => {
+        const dataReserva = new Date(r.data);
+        const horaInicio = r.horario_inicio.split(':').map(Number);
+        dataReserva.setHours(horaInicio[0], horaInicio[1], 0);
+        return dataReserva <= now && r.status !== 'cancelada';
+      }).length
+    };
 
-    // Buscar todas as reservas do usuário
-    const reservas = await Booking.find({ 
-      usuario_id: req.user.id 
-    })
-    .populate('quadra_id', 'nome foto_principal') // Selecionar apenas os campos necessários
-    .populate('esporte', 'nome icon')
-    .populate('metodo_pagamento', 'label')
-    .sort({ data: -1 }) // Ordenar por data mais recente
-    .lean(); // Converter para objeto JavaScript puro
+    // Para paginação
+    const total = await Booking.countDocuments(query);
 
-    console.log('2. Reservas encontradas:', reservas.length);
-
-    // Formatar as reservas para o frontend
-    const reservasFormatadas = reservas.map(reserva => ({
-      _id: reserva._id,
-      data: reserva.data,
-      horario_inicio: reserva.horario_inicio,
-      horario_fim: reserva.horario_fim,
-      status: reserva.status,
-      total: reserva.total,
-      quadra_id: reserva.quadra_id ? {
-        _id: reserva.quadra_id._id,
-        nome: reserva.quadra_id.nome,
-        foto_principal: reserva.quadra_id.foto_principal
-      } : null,
-      esporte: reserva.esporte ? {
-        _id: reserva.esporte._id,
-        nome: reserva.esporte.nome,
-        icon: reserva.esporte.icon
-      } : null,
-      metodo_pagamento: reserva.metodo_pagamento?.label || 'Não especificado'
-    }));
-
-    res.status(200).json({
+    res.json({
       success: true,
-      reservas: reservasFormatadas
+      reservas,
+      total,
+      metricas,
+      page: parseInt(page),
+      pages: Math.ceil(total / limit)
     });
-
+    
   } catch (error) {
-    console.error('3. Erro ao buscar reservas:', error);
+    console.error('Erro ao buscar reservas:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar reservas do usuário',
-      error: error.message
+      message: 'Erro ao buscar reservas'
     });
   }
 };
