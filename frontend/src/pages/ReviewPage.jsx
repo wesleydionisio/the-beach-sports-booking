@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
@@ -12,7 +14,6 @@ import {
   Snackbar,
   Alert
 } from '@mui/material';
-import { useParams } from 'react-router-dom';
 import ShareIcon from '@mui/icons-material/Share';
 import CancelIcon from '@mui/icons-material/Cancel';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -22,6 +23,8 @@ import { ptBR } from 'date-fns/locale';
 import axios from '../api/apiService';
 
 const ReviewPage = () => {
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const { id } = useParams();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +66,15 @@ const ReviewPage = () => {
         severity: 'error'
       });
     }
+  };
+
+  // Função para redirecionar para login
+  const handleLoginRedirect = () => {
+    navigate('/login', { 
+      state: { 
+        redirectTo: window.location.pathname // Salvar URL atual para retornar depois
+      } 
+    });
   };
 
   return (
@@ -163,16 +175,43 @@ const ReviewPage = () => {
         >
           Compartilhar
         </Button>
-        <Button
-          variant="contained"
-          color="error"
-          startIcon={<CancelIcon />}
-          onClick={handleCancel}
-          disabled={isCanceled}
-          fullWidth
-        >
-          {isCanceled ? 'Cancelado' : 'Cancelar'}
-        </Button>
+        
+        {user ? (
+          // Usuário logado - mostrar botão de cancelar
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<CancelIcon />}
+            onClick={handleCancel}
+            disabled={isCanceled}
+            fullWidth
+          >
+            {isCanceled ? 'Cancelado' : 'Cancelar'}
+          </Button>
+        ) : (
+          // Usuário não logado - mostrar botão de login
+          <Box sx={{ flex: 1 }}>
+            <Typography 
+              variant="caption" 
+              color="text.secondary"
+              sx={{ 
+                display: 'block', 
+                textAlign: 'center', 
+                mb: 1 
+              }}
+            >
+              Entre para poder editar
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleLoginRedirect}
+              fullWidth
+            >
+              Entrar
+            </Button>
+          </Box>
+        )}
       </Stack>
 
       {/* Snackbar para feedback */}

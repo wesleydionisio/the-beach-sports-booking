@@ -7,6 +7,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
 
 // Rotas públicas
 router.get('/check', bookingController.checkTimeSlots);
+router.get('/:id/public', bookingController.getBookingPublic);
 
 // Rotas protegidas
 router.use(authMiddleware);

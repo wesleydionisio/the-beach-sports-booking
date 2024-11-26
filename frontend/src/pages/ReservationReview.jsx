@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from '../api/apiService';
 import {
@@ -30,6 +30,8 @@ import SportLabel from '../components/common/SportLabel';
 import DateService from '../utils/dateService';
 import dayjs from 'dayjs';
 import { keyframes } from '@mui/system';
+import { AuthContext } from '../context/AuthContext';
+import StandardSkeleton from '../components/common/StandardSkeleton';
 
 // Definir a animação fadeInUp
 const fadeInUp = keyframes`
@@ -44,7 +46,8 @@ const fadeInUp = keyframes`
 `;
 
 const ReservationReview = () => {
-  const { reservationId } = useParams();
+  const { user } = useContext(AuthContext);
+  const { id } = useParams();
   const navigate = useNavigate();
   const [reservation, setReservation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -56,10 +59,14 @@ const ReservationReview = () => {
 
   const fetchReservationDetails = async () => {
     try {
-      console.log('1. Buscando reserva:', reservationId);
+      console.log('1. Buscando reserva:', id);
       setLoading(true);
       
-      const response = await axios.get(`/bookings/${reservationId}`);
+      const endpoint = user ? `/bookings/${id}` : `/bookings/${id}/public`;
+      console.log('2. Endpoint utilizado:', endpoint);
+      
+      const response = await axios.get(endpoint);
+      console.log('3. Resposta da API:', response.data);
       
       if (response.data?.success) {
         const reservationData = response.data.reservation;
@@ -82,16 +89,11 @@ const ReservationReview = () => {
           )
         };
 
-        console.log('4. Dados formatados final:', {
-          quadra: formattedReservation.quadra,
-          esporte: formattedReservation.esporte,
-          completo: formattedReservation
-        });
-
+        console.log('4. Dados formatados:', formattedReservation);
         setReservation(formattedReservation);
       }
     } catch (error) {
-      console.error('ERRO:', error);
+      console.error('❌ ERRO:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -99,10 +101,11 @@ const ReservationReview = () => {
   };
 
   useEffect(() => {
-    if (reservationId) {
+    console.log('0. ID da reserva:', id);
+    if (id) {
       fetchReservationDetails();
     }
-  }, [reservationId]);
+  }, [id]);
 
   useEffect(() => {
     if (reservation) {
@@ -140,7 +143,7 @@ const ReservationReview = () => {
     try {
       setIsCanceling(true);
       
-      const response = await axios.patch(`/bookings/${reservationId}`, {
+      const response = await axios.patch(`/bookings/${id}`, {
         status: 'cancelada'
       });
       
@@ -312,75 +315,134 @@ const ReservationReview = () => {
     );
   };
 
-  if (loading) {
-    return (
-      <PageContainer withHeader={true}>
-        <Box sx={{ maxWidth: 800, mx: 'auto', p: 2 }}>
-          <Paper 
-            sx={{ 
-              overflow: 'hidden',
-              animation: `${fadeInUp} 0.3s ease-out forwards`,
-              opacity: 0
-            }}
-          >
-            {/* Header Skeleton */}
-            <Box sx={{ p: 2, bgcolor: 'primary.main' }}>
+  const renderLoadingSkeleton = () => (
+    <PageContainer withHeader={true}>
+      <Box sx={{ maxWidth: 800, mx: 'auto', p: 2 }}>
+        <Paper 
+          sx={{ 
+            bgcolor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            overflow: 'hidden',
+            animation: `${fadeInUp} 0.3s ease-out forwards`,
+            opacity: 0
+          }}
+        >
+          {/* Status Skeleton */}
+          <Box sx={{ 
+            p: 2, 
+            bgcolor: '#2196F3',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
               <Skeleton 
                 variant="text" 
-                width={200} 
-                height={40} 
-                sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
-                animation="wave"
+                width={120} 
+                height={32} 
+                sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}
+              />
+              <Skeleton 
+                variant="text" 
+                width={150} 
+                height={32} 
+                sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}
               />
             </Box>
+          </Box>
 
-            {/* Horário e Status Skeleton */}
-            <Paper sx={{ p: 2, mb: 2 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Skeleton variant="text" width={80} height={24} animation="wave" />
-                  <Skeleton variant="text" width={120} height={32} animation="wave" />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Skeleton variant="rounded" width={100} height={32} animation="wave" />
-                    <Skeleton variant="rounded" width={120} height={32} animation="wave" />
-                    <Skeleton variant="rounded" width={100} height={32} animation="wave" />
-                  </Box>
-                </Grid>
+          {/* Horário e Status Skeleton */}
+          <Box sx={{ p: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Skeleton 
+                  variant="text" 
+                  width={80} 
+                  height={24} 
+                  sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+                />
+                <Skeleton 
+                  variant="text" 
+                  width={150} 
+                  height={32} 
+                  sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+                />
               </Grid>
-            </Paper>
+              <Grid item xs={12} sm={6}>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {[100, 120, 100].map((width, index) => (
+                    <Skeleton
+                      key={index}
+                      variant="rounded"
+                      width={width}
+                      height={32}
+                      sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+                    />
+                  ))}
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
 
-            {/* Imagem Skeleton */}
+          {/* Imagem Skeleton */}
+          <Skeleton 
+            variant="rectangular" 
+            width="100%" 
+            height={200}
+            sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+          />
+
+          {/* Pagamento Skeleton */}
+          <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             <Skeleton 
-              variant="rectangular" 
-              width="100%" 
-              height={200}
-              animation="wave"
-              sx={{ bgcolor: 'rgba(0,0,0,0.1)' }}
+              variant="text" 
+              width={120} 
+              height={24} 
+              sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
             />
-
-            {/* Pagamento Skeleton */}
-            <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-              <Skeleton variant="text" width={120} height={24} animation="wave" />
-              <Skeleton variant="text" width={150} height={32} animation="wave" />
-              <Box sx={{ mt: 2 }}>
-                <Skeleton variant="text" width={140} height={24} animation="wave" />
-                <Skeleton variant="text" width={100} height={32} animation="wave" />
-              </Box>
+            <Skeleton 
+              variant="text" 
+              width={150} 
+              height={32} 
+              sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+            />
+            <Box sx={{ mt: 2 }}>
+              <Skeleton 
+                variant="text" 
+                width={140} 
+                height={24} 
+                sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+              />
+              <Skeleton 
+                variant="text" 
+                width={100} 
+                height={32} 
+                sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+              />
             </Box>
+          </Box>
 
-            {/* Botões Skeleton */}
-            <Paper sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Skeleton variant="rounded" width="50%" height={40} animation="wave" />
-                <Skeleton variant="rounded" width="50%" height={40} animation="wave" />
-              </Box>
-            </Paper>
-          </Paper>
-        </Box>
-      </PageContainer>
-    );
+          {/* Botões Skeleton */}
+          <Box sx={{ p: 2, display: 'flex', gap: 2 }}>
+            <Skeleton 
+              variant="rounded" 
+              width="50%" 
+              height={40} 
+              sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+            />
+            <Skeleton 
+              variant="rounded" 
+              width="50%" 
+              height={40} 
+              sx={{ bgcolor: 'rgba(255,255,255,0.1)' }}
+            />
+          </Box>
+        </Paper>
+      </Box>
+    </PageContainer>
+  );
+
+  if (loading) {
+    return renderLoadingSkeleton();
   }
 
   if (error) {
@@ -419,19 +481,106 @@ const ReservationReview = () => {
 
   return (
     <PageContainer withHeader={true}>
-      <Box sx={{ maxWidth: 800, mx: 'auto', p: 2 }}>
-        {/* Main Card */}
-        <Paper sx={{ overflow: 'hidden' }}>
+      {/* Background preto */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          bgcolor: '#000000', // Fundo preto
+          zIndex: -2
+        }}
+      />
+
+      {/* Imagem com 100% de opacidade */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: `url(https://www.recreiodajuventude.com.br/oficial/2023/userfiles/redacao/posts/quadra-areia-noticia-1.jpg)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'blur(8px)',
+          transform: 'scale(1.1)',
+          opacity: 1, // Opacidade total
+          zIndex: -1
+        }}
+      />
+
+      {/* Overlay escuro para melhor contraste */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)', // Overlay escuro
+          zIndex: -1
+        }}
+      />
+
+      <Box sx={{ 
+        maxWidth: 800, 
+        mx: 'auto', 
+        p: 2,
+        position: 'relative',
+        zIndex: 1
+      }}>
+        <Paper 
+          sx={{ 
+            bgcolor: 'rgba(0, 0, 0, 0.1)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 4,
+            color: 'white',
+            overflow: 'hidden',
+            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+            '& .MuiPaper-root': { // Para papers internos
+              bgcolor: 'rgba(0, 0, 0, 0.1)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: 'white'
+            },
+            '& .MuiTypography-root': { // Para todos os textos
+              color: 'white'
+            },
+            '& .MuiChip-root': { // Para os chips
+              bgcolor: 'rgba(0, 0, 0, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: 'white'
+            },
+            '& .MuiSectionLabel-root': { // Para os labels de seção
+              color: 'rgba(255, 255, 255, 0.7)'
+            }
+          }}
+        >
           {/* Countdown */}
           <Box 
             sx={{ 
               p: 2, 
-              bgcolor: 'primary.main', 
+              bgcolor: '#2196F3', // Azul mais vivido
               color: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 1
+              gap: 1,
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: `
+                0 0 20px rgba(33, 150, 243, 0.3),
+                0 0 40px rgba(33, 150, 243, 0.2),
+                0 0 60px rgba(33, 150, 243, 0.1)
+              `, // Efeito glow suave com múltiplas camadas
+              position: 'relative',
+              zIndex: 2,
+              '& .MuiTypography-root': {
+                textShadow: '0 0 10px rgba(255, 255, 255, 0.3)' // Glow suave no texto
+              }
             }}
           >
             <Typography 
@@ -439,7 +588,8 @@ const ReservationReview = () => {
               sx={{ 
                 textTransform: 'uppercase',
                 fontSize: '1rem',
-                letterSpacing: '0.5px'
+                letterSpacing: '0.5px',
+                fontWeight: 500
               }}
             >
               {getTimeStatus(reservation?.data, reservation?.horario_inicio, reservation?.horario_fim) === 'JÁ REALIZADO' ? 
@@ -449,7 +599,7 @@ const ReservationReview = () => {
             <Typography 
               variant="h5" 
               sx={{ 
-                fontWeight: 550,
+                fontWeight: 600,
                 fontSize: '1.5rem'
               }}
             >
@@ -457,8 +607,17 @@ const ReservationReview = () => {
             </Typography>
           </Box>
 
-          {/* Horário e Status Container */}
-          <Paper sx={{ p: 2, mb: 2 }}>
+          {/* Main content */}
+          <Paper 
+            sx={{ 
+              p: 2, 
+              mb: 2,
+              bgcolor: 'rgba(0, 0, 0, 0.3)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: 'white'
+            }}
+          >
             <Grid container spacing={2}>
               {/* Horário */}
               <Grid item xs={12} sm={6}>
@@ -477,7 +636,7 @@ const ReservationReview = () => {
                   flexWrap: 'wrap' // Para caso a tela seja muito pequena
                 }}>
                   <Chip
-                    label={reservation?.status?.toUpperCase() || 'PENDENTE'}
+                    label={reservation?.status?.toUpperCase() || 'Pendente'}
                     color={getStatusColor(reservation?.status)}
                     sx={{ fontWeight: 'bold' }}
                   />
@@ -507,15 +666,7 @@ const ReservationReview = () => {
             </Grid>
           </Paper>
 
-          {/* Esporte Label com Blur */}
-          <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 2 }}>
-            <SportLabel 
-              label={reservation?.esporte?.nome || '-'}
-              sportData={reservation?.esporte}
-            />
-          </Box>
-
-          {/* Quadra Card */}
+          {/* Quadra Card - mantém o background da imagem */}
           <Box
             sx={{
               height: 200,
@@ -523,7 +674,9 @@ const ReservationReview = () => {
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               position: 'relative',
-              backgroundColor: '#333',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 1,
+              overflow: 'hidden'
             }}
           >
             {/* Esporte Label */}
@@ -554,7 +707,14 @@ const ReservationReview = () => {
           </Box>
 
           {/* Pagamento Info */}
-          <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Box 
+            sx={{ 
+              p: 2, 
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              bgcolor: 'rgba(0, 0, 0, 0.3)',
+              backdropFilter: 'blur(10px)'
+            }}
+          >
             <SectionLabel>Pagamento</SectionLabel>
             <Typography variant="h6" gutterBottom>
               {reservation?.pagamento || '-'}
@@ -569,7 +729,18 @@ const ReservationReview = () => {
           </Box>
 
           {/* Actions */}
-          <Paper sx={{ p: 2 }}>
+          <Paper 
+            sx={{ 
+              p: 2,
+              bgcolor: 'rgba(0, 0, 0, 0.3)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              '& .MuiButton-root': {
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white'
+              }
+            }}
+          >
             <Box sx={{ 
               display: 'flex', 
               gap: 2,

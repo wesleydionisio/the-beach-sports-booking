@@ -742,3 +742,53 @@ exports.confirmarRecorrencia = async (req, res) => {
     });
   }
 };
+
+// Função para visualização pública da reserva
+exports.getBookingPublic = async (req, res) => {
+  const { id } = req.params;
+  
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'ID inválido.' 
+    });
+  }
+
+  try {
+    const booking = await Booking.findById(id)
+      .populate('quadra_id')
+      .populate('esporte')
+      .populate('usuario_id', 'nome')
+      .select('-metodo_pagamento -valor'); // Omitir dados sensíveis
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reserva não encontrada.'
+      });
+    }
+
+    const reservationData = {
+      reservationId: booking._id,
+      quadra_id: booking.quadra_id._id,
+      nome: booking.quadra_id.nome,
+      foto_principal: booking.quadra_id.foto_principal,
+      data: booking.data,
+      horario_inicio: booking.horario_inicio,
+      horario_fim: booking.horario_fim,
+      esporte: booking.esporte.nome,
+      cliente: booking.usuario_id.nome,
+      status: booking.status
+    };
+
+    res.status(200).json({
+      success: true,
+      reservation: reservationData
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar reserva.'
+    });
+  }
+};
