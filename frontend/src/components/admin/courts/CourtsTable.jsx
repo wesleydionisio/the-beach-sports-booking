@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from '../../../api/apiService';
 import {
   Paper,
   Table,
@@ -14,54 +15,13 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Box,
-  Typography
 } from '@mui/material';
 import {
   Edit,
   Delete,
   MoreVert,
-  Block,
-  SportsTennis,
-  AttachMoney
 } from '@mui/icons-material';
-
-// Dados mockados
-const mockCourts = [
-  {
-    id: 1,
-    nome: 'Quadra 1',
-    esportes: ['Beach Tennis', 'Vôlei de Praia'],
-    status: 'active',
-    valorHora: 120.00,
-    descricao: 'Quadra oficial de beach tennis',
-    dimensoes: '16m x 8m',
-    superficie: 'Areia',
-    cobertura: true
-  },
-  {
-    id: 2,
-    nome: 'Quadra 2',
-    esportes: ['Futevôlei', 'Vôlei de Praia'],
-    status: 'maintenance',
-    valorHora: 100.00,
-    descricao: 'Quadra de vôlei e futevôlei',
-    dimensoes: '18m x 9m',
-    superficie: 'Areia',
-    cobertura: false
-  },
-  {
-    id: 3,
-    nome: 'Quadra 3',
-    esportes: ['Beach Tennis'],
-    status: 'active',
-    valorHora: 150.00,
-    descricao: 'Quadra premium de beach tennis',
-    dimensoes: '16m x 8m',
-    superficie: 'Areia',
-    cobertura: true
-  }
-];
+import { useSnackbar } from 'notistack';
 
 const statusConfig = {
   active: { label: 'Ativa', color: 'success' },
@@ -69,18 +29,48 @@ const statusConfig = {
   inactive: { label: 'Inativa', color: 'error' }
 };
 
-const CourtsTable = () => {
-  const [courts, setCourts] = useState(mockCourts);
+const CourtsTable = ({ onEditCourt }) => {
+  const [courts, setCourts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedCourt, setSelectedCourt] = useState(null);
+  const { enqueueSnackbar } = useSnackbar();
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
+  const fetchCourts = async () => {
+    try {
+      const response = await axios.get('/courts');
+      setCourts(response.data);
+    } catch (error) {
+      enqueueSnackbar('Erro ao carregar quadras', { variant: 'error' });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+  useEffect(() => {
+    fetchCourts();
+  }, []);
+
+  const handleDeleteCourt = async (courtId) => {
+    try {
+      await axios.delete(`/courts/${courtId}`);
+      enqueueSnackbar('Quadra excluída com sucesso', { variant: 'success' });
+      fetchCourts(); // Recarrega a lista
+    } catch (error) {
+      enqueueSnackbar('Erro ao excluir quadra', { variant: 'error' });
+    }
+  };
+
+  const handleMenuClick = (event, court) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedCourt(court);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedCourt(null);
   };
 
   return (
@@ -91,58 +81,76 @@ const CourtsTable = () => {
             <TableRow>
               <TableCell>Nome</TableCell>
               <TableCell>Esportes</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Valor da Hora</TableCell>
-              <TableCell>Descrição</TableCell>
-              <TableCell>Dimensões</TableCell>
-              <TableCell>Superfície</TableCell>
-              <TableCell>Cobertura</TableCell>
+              <TableCell>Duração Padrão</TableCell>
+              <TableCell>Preço/Hora</TableCell>
               <TableCell>Ações</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {courts.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((court) => (
-              <TableRow key={court.id}>
-                <TableCell>{court.nome}</TableCell>
-                <TableCell>{court.esportes.join(', ')}</TableCell>
-                <TableCell>
-                  <Chip label={statusConfig[court.status].label} color={statusConfig[court.status].color} />
-                </TableCell>
-                <TableCell>{court.valorHora}</TableCell>
-                <TableCell>{court.descricao}</TableCell>
-                <TableCell>{court.dimensoes}</TableCell>
-                <TableCell>{court.superficie}</TableCell>
-                <TableCell>{court.cobertura ? 'Sim' : 'Não'}</TableCell>
-                <TableCell>
-                  <Menu>
-                    <MenuItem>
-                      <ListItemIcon>
-                        <Edit />
-                      </ListItemIcon>
-                      <ListItemText>Editar</ListItemText>
-                    </MenuItem>
-                    <MenuItem>
-                      <ListItemIcon>
-                        <Delete />
-                      </ListItemIcon>
-                      <ListItemText>Excluir</ListItemText>
-                    </MenuItem>
-                  </Menu>
-                </TableCell>
-              </TableRow>
+            {courts
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((court) => (
+                <TableRow key={court._id}>
+                  <TableCell>{court.nome}</TableCell>
+                  <TableCell>
+                    {court.esportes_permitidos.map(esporte => 
+                      <Chip 
+                        key={esporte._id} 
+                        label={esporte.nome} 
+                        size="small" 
+                        sx={{ mr: 0.5 }} 
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>{court.duracao_padrao} minutos</TableCell>
+                  <TableCell>R$ {court.preco_por_hora}</TableCell>
+                  <TableCell>
+                    <IconButton onClick={(e) => handleMenuClick(e, court)}>
+                      <MoreVert />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
       <TablePagination
-        rowsPerPageOptions={[10, 25, 50, 100]}
+        rowsPerPageOptions={[5, 10, 25]}
         component="div"
         count={courts.length}
         rowsPerPage={rowsPerPage}
         page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
+        onPageChange={(e, newPage) => setPage(newPage)}
+        onRowsPerPageChange={(e) => {
+          setRowsPerPage(parseInt(e.target.value, 10));
+          setPage(0);
+        }}
       />
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={() => {
+          onEditCourt(selectedCourt);
+          handleMenuClose();
+        }}>
+          <ListItemIcon>
+            <Edit fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Editar</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => {
+          handleDeleteCourt(selectedCourt._id);
+          handleMenuClose();
+        }}>
+          <ListItemIcon>
+            <Delete fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Excluir</ListItemText>
+        </MenuItem>
+      </Menu>
     </Paper>
   );
 };

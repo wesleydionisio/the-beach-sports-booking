@@ -792,3 +792,162 @@ exports.getBookingPublic = async (req, res) => {
     });
   }
 };
+
+exports.getBookingsCountByDate = async (req, res) => {
+  try {
+    const { courtId } = req.params;
+    const date = req.query.date || new Date().toISOString().split('T')[0];
+    
+    console.log('\n=== CONTAGEM DIÁRIA ===');
+    console.log('Parâmetros recebidos:', {
+      courtId,
+      date,
+      query: req.query
+    });
+    
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    console.log('Período de busca:', {
+      startOfDay: startOfDay.toISOString(),
+      endOfDay: endOfDay.toISOString()
+    });
+
+    const count = await Booking.countDocuments({
+      quadra_id: courtId,
+      data: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      status: { $ne: 'cancelada' }
+    });
+    
+    console.log('Resultado da contagem:', {
+      count,
+      filtros_usados: {
+        quadra_id: courtId,
+        data_inicio: startOfDay,
+        data_fim: endOfDay,
+        status_excluido: 'cancelada'
+      }
+    });
+
+    res.json({ count });
+  } catch (error) {
+    console.error('ERRO na contagem diária:', error);
+    res.status(500).json({ 
+      message: 'Erro ao contar agendamentos por data',
+      error: error.message 
+    });
+  }
+};
+exports.getBookingsCountByMonth = async (req, res) => {
+  try {
+    const { courtId } = req.params;
+    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const year = new Date().getFullYear();
+    
+    console.log('\n=== CONTAGEM MENSAL ===');
+    console.log('Parâmetros recebidos:', {
+      courtId,
+      month,
+      year,
+      query: req.query
+    });
+    
+    const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+    
+    console.log('Período de busca:', {
+      startOfMonth: startOfMonth.toISOString(),
+      endOfMonth: endOfMonth.toISOString()
+    });
+
+    const count = await Booking.countDocuments({
+      quadra_id: courtId,
+      data: {
+        $gte: startOfMonth,
+        $lte: endOfMonth
+      },
+      status: { $ne: 'cancelada' }
+    });
+    
+    console.log('Resultado da contagem:', {
+      count,
+      filtros_usados: {
+        quadra_id: courtId,
+        data_inicio: startOfMonth,
+        data_fim: endOfMonth,
+        status_excluido: 'cancelada'
+      }
+    });
+
+    // Buscar todas as reservas para debug
+    const todasReservas = await Booking.find({
+      quadra_id: courtId,
+      status: { $ne: 'cancelada' }
+    }).select('data horario_inicio horario_fim status');
+
+    console.log('Todas as reservas desta quadra:', todasReservas);
+
+    res.json({ count });
+  } catch (error) {
+    console.error('ERRO na contagem mensal:', error);
+    res.status(500).json({ 
+      message: 'Erro ao contar agendamentos por mês',
+      error: error.message 
+    });
+  }
+};
+
+exports.getAdminBookings = async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 10, 
+      status, 
+      data_inicio, 
+      data_fim,
+      quadra_id 
+    } = req.query;
+
+    const query = {};
+    
+    // Filtros
+    if (status) query.status = status;
+    if (quadra_id) query.quadra_id = quadra_id;
+    if (data_inicio || data_fim) {
+      query.data = {};
+      if (data_inicio) query.data.$gte = new Date(data_inicio);
+      if (data_fim) query.data.$lte = new Date(data_fim);
+    }
+
+    const [bookings, total] = await Promise.all([
+      Booking.find(query)
+        .populate('usuario_id', 'nome email')
+        .populate('quadra_id', 'nome')
+        .populate('esporte', 'nome')
+        .sort({ data: -1, horario_inicio: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Booking.countDocuments(query)
+    ]);
+
+    res.json({
+      bookings,
+      total,
+      pages: Math.ceil(total / limit),
+      currentPage: page
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar agendamentos:', error);
+    res.status(500).json({ 
+      message: 'Erro ao buscar agendamentos',
+      error: error.message 
+    });
+  }
+};

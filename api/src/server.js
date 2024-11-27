@@ -32,6 +32,8 @@ app.use(cors({
   origin: 'http://localhost:3001', // URL do frontend
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Métodos permitidos
   allowedHeaders: ['Content-Type', 'Authorization'], // Cabeçalhos permitidos
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3008',
+  credentials: true
 }));
 
 // Conectar ao banco de dados

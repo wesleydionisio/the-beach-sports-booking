@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -7,42 +7,71 @@ import {
   Grid,
   ToggleButton,
   ToggleButtonGroup,
-  Button
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  Chip
 } from '@mui/material';
-import {
-  ViewDay,
-  ViewWeek,
-  ViewModule,
-  Add
-} from '@mui/icons-material';
-import BookingCalendar from '../../components/admin/bookings/BookingCalendar';
-import BookingFormModal from '../../components/admin/bookings/BookingFormModal';
-import BookingDetailsModal from '../../components/admin/bookings/BookingDetailsModal';
-import BookingFilters from '../../components/admin/bookings/BookingFilters';
 import { useSnackbar } from 'notistack';
+import axios from '../../api/apiService';
+import DateService from '../../utils/dateService';
+import BookingDetailsModal from '../../components/admin/bookings/BookingDetailsModal';
 
 const BookingsPage = () => {
   const { enqueueSnackbar } = useSnackbar();
-  const [view, setView] = useState('timeGridWeek');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [total, setTotal] = useState(0);
   const [selectedBooking, setSelectedBooking] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
-  const handleViewChange = (event, newView) => {
-    if (newView !== null) {
-      setView(newView);
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/bookings/admin/list', {
+        params: {
+          page: page + 1,
+          limit: rowsPerPage
+        }
+      });
+      
+      setBookings(response.data.bookings);
+      setTotal(response.data.total);
+    } catch (error) {
+      console.error('Erro ao buscar agendamentos:', error);
+      enqueueSnackbar('Erro ao carregar agendamentos', { variant: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleOpenModal = (date = null) => {
-    setSelectedDate(date);
-    setModalOpen(true);
+  useEffect(() => {
+    fetchBookings();
+  }, [page, rowsPerPage]);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
   };
 
-  const handleCloseModal = () => {
-    setSelectedDate(null);
-    setModalOpen(false);
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pendente: 'warning',
+      confirmada: 'success',
+      cancelada: 'error'
+    };
+    return colors[status] || 'default';
   };
 
   const handleOpenDetails = (booking) => {
@@ -55,97 +84,77 @@ const BookingsPage = () => {
     setDetailsModalOpen(false);
   };
 
-  const handleSubmitBooking = async (values) => {
-    try {
-      console.log('Dados do agendamento:', values);
-      enqueueSnackbar(
-        `Agendamento ${values.isEditing ? 'atualizado' : 'criado'} com sucesso!`,
-        { variant: 'success' }
-      );
-      handleCloseModal();
-    } catch (error) {
-      console.error('Erro ao salvar agendamento:', error);
-      enqueueSnackbar('Erro ao salvar agendamento', { variant: 'error' });
-    }
-  };
-
   return (
     <Container maxWidth="xl">
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography variant="h4" gutterBottom>
           Agendamentos
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Gerencie os agendamentos das quadras
         </Typography>
       </Box>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 2 
-            }}>
-              <ToggleButtonGroup
-                value={view}
-                exclusive
-                onChange={handleViewChange}
-                size="small"
-              >
-                <ToggleButton value="timeGridDay">
-                  <ViewDay />
-                </ToggleButton>
-                <ToggleButton value="timeGridWeek">
-                  <ViewWeek />
-                </ToggleButton>
-                <ToggleButton value="dayGridMonth">
-                  <ViewModule />
-                </ToggleButton>
-              </ToggleButtonGroup>
-
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => handleOpenModal()}
-              >
-                Novo Agendamento
-              </Button>
-            </Box>
-
-            <BookingFilters />
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2, height: 'calc(100vh - 300px)' }}>
-            <BookingCalendar
-              view={view}
-              onEventClick={handleOpenDetails}
-              onDateSelect={handleOpenModal}
-            />
-          </Paper>
-        </Grid>
-      </Grid>
-
-      <BookingFormModal
-        open={modalOpen}
-        onClose={handleCloseModal}
-        onSubmit={handleSubmitBooking}
-        initialDate={selectedDate}
-      />
+      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+        <TableContainer>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>Cliente</TableCell>
+                <TableCell>Quadra</TableCell>
+                <TableCell>Data</TableCell>
+                <TableCell>Horário</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Valor</TableCell>
+                <TableCell>Ações</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {bookings.map((booking) => (
+                <TableRow key={booking._id} hover>
+                  <TableCell>{booking.usuario_id?.nome}</TableCell>
+                  <TableCell>{booking.quadra_id?.nome}</TableCell>
+                  <TableCell>
+                    {DateService.formatDisplay(booking.data)}
+                  </TableCell>
+                  <TableCell>
+                    {`${booking.horario_inicio} - ${booking.horario_fim}`}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={booking.status}
+                      color={getStatusColor(booking.status)}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {`R$ ${booking.total.toFixed(2)}`}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      size="small"
+                      onClick={() => handleOpenDetails(booking)}
+                    >
+                      Detalhes
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          component="div"
+          count={total}
+          page={page}
+          onPageChange={handleChangePage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Itens por página"
+        />
+      </Paper>
 
       <BookingDetailsModal
+        booking={selectedBooking}
         open={detailsModalOpen}
         onClose={handleCloseDetails}
-        booking={selectedBooking}
-        onEdit={() => {
-          handleCloseDetails();
-          handleOpenModal();
-          setSelectedBooking(selectedBooking);
-        }}
       />
     </Container>
   );

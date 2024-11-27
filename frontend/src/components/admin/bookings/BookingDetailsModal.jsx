@@ -11,67 +11,125 @@ import {
   Grid,
   Divider
 } from '@mui/material';
-import {
-  AccessTime,
-  SportsTennis,
-  Person,
-  AttachMoney,
-  Phone,
-  Email
-} from '@mui/icons-material';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import DateService from '../../../utils/dateService';
 
-const statusConfig = {
-  confirmed: { label: 'Confirmado', color: 'success' },
-  pending: { label: 'Pendente', color: 'warning' },
-  canceled: { label: 'Cancelado', color: 'error' }
-};
-
-const BookingDetailsModal = ({ open, onClose, booking, onEdit }) => {
+const BookingDetailsModal = ({ booking, open, onClose }) => {
   if (!booking) return null;
 
-  const formatDate = (dateStr) => {
-    return format(new Date(dateStr), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-  };
-
-  const formatTime = (dateStr) => {
-    return format(new Date(dateStr), 'HH:mm');
+  const getStatusColor = (status) => {
+    const statusMap = {
+      'confirmada': 'success',
+      'pendente': 'warning',
+      'cancelada': 'error'
+    };
+    return statusMap[status] || 'default';
   };
 
   return (
-    <Dialog open={open} onClose={onClose}>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Detalhes do Agendamento</DialogTitle>
       <DialogContent>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <AccessTime />
-          <Typography variant="body1">
-            {formatDate(booking.start)} - {formatTime(booking.start)}
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <SportsTennis />
-          <Typography variant="body1">{booking.title}</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Person />
-          <Typography variant="body1">{booking.courtId}</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <AttachMoney />
-          <Typography variant="body1">{statusConfig[booking.status].label}</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Phone />
-          <Typography variant="body1">{booking.phone}</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Email />
-          <Typography variant="body1">{booking.email}</Typography>
-        </Box>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Status
+              </Typography>
+              <Chip
+                label={booking.status}
+                color={getStatusColor(booking.status)}
+                size="small"
+                sx={{ mt: 0.5 }}
+              />
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Cliente
+            </Typography>
+            <Typography variant="body1">
+              {booking.usuario_id?.nome || 'N/A'}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Email
+            </Typography>
+            <Typography variant="body1">
+              {booking.usuario_id?.email || 'N/A'}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Divider sx={{ my: 1 }} />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Quadra
+            </Typography>
+            <Typography variant="body1">
+              {booking.quadra_id?.nome || 'N/A'}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Esporte
+            </Typography>
+            <Typography variant="body1">
+              {booking.esporte?.nome || 'N/A'}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Divider sx={{ my: 1 }} />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Data
+            </Typography>
+            <Typography variant="body1">
+              {DateService.formatDisplay(booking.data)}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Horário
+            </Typography>
+            <Typography variant="body1">
+              {`${booking.horario_inicio} - ${booking.horario_fim}`}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Divider sx={{ my: 1 }} />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Valor Total
+            </Typography>
+            <Typography variant="body1">
+              {`R$ ${booking.total?.toFixed(2) || '0.00'}`}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Método de Pagamento
+            </Typography>
+            <Typography variant="body1">
+              {booking.metodo_pagamento?.nome || 'N/A'}
+            </Typography>
+          </Grid>
+        </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onEdit}>Editar</Button>
         <Button onClick={onClose}>Fechar</Button>
       </DialogActions>
     </Dialog>
