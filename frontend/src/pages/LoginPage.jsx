@@ -78,31 +78,66 @@ const LoginPage = () => {
 
   const handleLogin = async () => {
     console.log('🚀 Iniciando processo de login...');
+    console.log('📧 Email:', formData.email);
     setLoading(true);
     setError('');
 
     try {
+      console.log('📤 Enviando requisição de login...');
       const response = await axios.post('/auth/login', {
         email: formData.email,
         senha: formData.senha
       });
 
-      if (response.data.success) {
+      console.log('📥 Resposta recebida:', response.data);
+
+      if (response.data.success || response.data.token) {
         console.log('✅ Login realizado com sucesso');
-        localStorage.setItem('authToken', response.data.token);
+        console.log('👤 Dados do usuário:', response.data.user);
         
-        // Atualizar o contexto com os dados do usuário
+        // Verificar se o token existe
+        if (!response.data.token) {
+          console.error('❌ Token não encontrado na resposta');
+          throw new Error('Token não encontrado');
+        }
+
+        try {
+          console.log('🔑 Tentando salvar token no localStorage...');
+          localStorage.clear(); // Limpar localStorage primeiro
+          localStorage.setItem('authToken', response.data.token);
+          
+          // Verificar se o token foi salvo corretamente
+          const savedToken = localStorage.getItem('authToken');
+          console.log('✅ Token salvo:', !!savedToken);
+          
+          if (!savedToken) {
+            console.error('❌ Falha ao salvar token no localStorage');
+            throw new Error('Falha ao salvar token');
+          }
+        } catch (storageError) {
+          console.error('❌ Erro ao manipular localStorage:', storageError);
+          throw storageError;
+        }
+        
+        console.log('👤 Atualizando contexto do usuário...');
         setUser(response.data.user);
         
-        // Aguardar um momento para garantir que o token foi salvo
+        console.log('⏳ Iniciando redirecionamento...');
         setTimeout(() => {
+          console.log('🔄 Executando redirecionamento...');
           handleRedirectAfterAuth();
         }, 100);
       }
     } catch (error) {
       console.error('❌ Erro no login:', error);
+      console.error('📝 Detalhes do erro:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       setError(error.response?.data?.message || 'Erro ao fazer login');
     } finally {
+      console.log('🏁 Processo de login finalizado');
       setLoading(false);
     }
   };

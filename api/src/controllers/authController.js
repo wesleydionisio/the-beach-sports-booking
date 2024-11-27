@@ -103,68 +103,73 @@ const register = async (req, res) => {
  */
 const login = async (req, res) => {
   try {
-    console.log('Dados recebidos:', req.body); // Log dos dados recebidos
-
-    // Validar os dados de entrada
-    const { error } = userLoginSchema.validate(req.body);
-    if (error) {
-      console.log('Erro de validação:', error.details[0].message);
-      return res.status(400).json({
-        success: false,
-        message: error.details[0].message
-      });
-    }
-
     const { email, senha } = req.body;
 
-    // Verificar se o usuário existe
-    const user = await User.findOne({ email: email.toLowerCase() });
-    console.log('Usuário encontrado:', user ? 'Sim' : 'Não'); // Log do resultado da busca
+    // Log dos dados recebidos
+    console.log('Tentativa de login:', { email });
+
+    // Validações básicas
+    if (!email || !senha) {
+      return res.status(400).json({
+        message: 'Email e senha são obrigatórios'
+      });
+    }
+
+    // Buscar usuário COM a senha
+    const user = await User.findOne({ email }).select('+senha');
+    
+    console.log('Usuário encontrado:', !!user);
 
     if (!user) {
-      return res.status(400).json({
-        success: false,
+      return res.status(401).json({
         message: 'Email ou senha inválidos'
       });
     }
 
-    // Verificar a senha
-    const isMatch = await user.comparePassword(senha);
-    console.log('Senha corresponde:', isMatch ? 'Sim' : 'Não'); // Log do resultado da comparação
+    // Verificar se a senha existe
+    if (!user.senha) {
+      console.error('Usuário sem senha definida:', email);
+      return res.status(401).json({
+        message: 'Conta sem senha definida. Por favor, redefina sua senha.'
+      });
+    }
 
-    if (!isMatch) {
-      return res.status(400).json({
-        success: false,
+    // Verificar senha
+    const isValidPassword = await user.comparePassword(senha);
+    
+    console.log('Senha válida:', isValidPassword);
+
+    if (!isValidPassword) {
+      return res.status(401).json({
         message: 'Email ou senha inválidos'
       });
     }
 
-    // Gerar token
+    // Gerar token JWT
     const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET || 'secretkey',
+      { 
+        id: user._id,
+        role: user.role 
+      },
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    // Log do sucesso
-    console.log('Login bem-sucedido para:', user.email);
+    // Remover senha do objeto de resposta
+    const userResponse = user.toObject();
+    delete userResponse.senha;
 
-    res.status(200).json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        nome: user.nome,
-        email: user.email
-      }
+    // Enviar resposta
+    res.json({
+      user: userResponse,
+      token
     });
 
   } catch (error) {
-    console.error('Erro detalhado no login:', error);
+    console.error('Erro no login:', error);
     res.status(500).json({
-      success: false,
-      message: 'Erro interno do servidor',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Erro interno no servidor',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
