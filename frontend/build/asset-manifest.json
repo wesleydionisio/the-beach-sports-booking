@@ -1,0 +1,23 @@
+{
+  "files": {
+    "main.css": "/static/css/main.dd7796e8.css",
+    "main.js": "/static/js/main.76d72500.js",
+    "static/media/section-1.png": "/static/media/section-1.70b45347a80c0fd28eed.png",
+    "static/media/pix.png": "/static/media/pix.c3e7be4f7cba3f66c8b2.png",
+    "static/media/slick.svg": "/static/media/slick.2630a3e3eab21c607e21.svg",
+    "static/media/slick.eot": "/static/media/slick.a4e97f5a2a64f0ab1323.eot",
+    "static/media/pix.svg": "/static/media/pix.f33106e3652db55dffba.svg",
+    "static/media/slick.ttf": "/static/media/slick.c94f7671dcc99dce43e2.ttf",
+    "static/media/beach-tennis.svg": "/static/media/beach-tennis.b727f0963d7bd2acab1c.svg",
+    "static/media/volei.svg": "/static/media/volei.e30792825c1138934b48.svg",
+    "static/media/slick.woff": "/static/media/slick.295183786cd8a1389865.woff",
+    "static/media/futvolei.svg": "/static/media/futvolei.01def45b76d052ce4a12.svg",
+    "index.html": "/index.html",
+    "main.dd7796e8.css.map": "/static/css/main.dd7796e8.css.map",
+    "main.76d72500.js.map": "/static/js/main.76d72500.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.dd7796e8.css",
+    "static/js/main.76d72500.js"
+  ]
+}
